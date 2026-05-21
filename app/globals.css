@@ -1715,6 +1715,19 @@ a {
   border-radius: 26px;
 }
 
+.focus-month-tier-sticker-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -4px;
+}
+
+.focus-month-tier-sticker {
+  width: 74px;
+  height: 74px;
+  object-fit: contain;
+  transform: rotate(8deg);
+}
+
 .focus-month-tier-active {
   border-color: rgba(255, 211, 77, 0.42);
   box-shadow:

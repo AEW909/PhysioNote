@@ -467,6 +467,9 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                   }`}
                   key={tier.label}
                 >
+                  <div className="focus-month-tier-sticker-wrap">
+                    <img alt={tier.stickerAlt} className="focus-month-tier-sticker" src={tier.stickerSrc} />
+                  </div>
                   <p className="focus-tier-points">
                     {tier.minPoints}+ pts - {tier.minWeeksHit} weeks hit
                   </p>
