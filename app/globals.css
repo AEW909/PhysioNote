@@ -1721,11 +1721,35 @@ a {
   margin-bottom: -4px;
 }
 
-.focus-month-tier-sticker {
-  width: 74px;
-  height: 74px;
+.focus-liona-reward-art {
+  position: relative;
+  width: 124px;
+  height: 124px;
+  display: grid;
+  place-items: center;
+}
+
+.focus-liona-reward-photo {
+  width: 112px;
+  height: 112px;
   object-fit: contain;
-  transform: rotate(8deg);
+  filter: drop-shadow(0 16px 18px rgba(0, 0, 0, 0.28));
+}
+
+.focus-liona-reward-art-1 .focus-liona-reward-photo {
+  transform: rotate(-7deg);
+}
+
+.focus-liona-reward-art-2 .focus-liona-reward-photo {
+  transform: rotate(6deg);
+}
+
+.focus-liona-reward-art-3 .focus-liona-reward-photo {
+  transform: rotate(-5deg);
+}
+
+.focus-liona-reward-art-4 .focus-liona-reward-photo {
+  transform: rotate(5deg);
 }
 
 .focus-month-tier-active {
@@ -2310,8 +2334,6 @@ a {
   .focus-month-headline,
   .focus-win-strip,
   .focus-month-progress-copy,
-  .focus-week-nav,
-  .focus-month-nav,
   .focus-breakdown-wrap {
     grid-template-columns: 1fr;
     display: grid;
@@ -2331,8 +2353,14 @@ a {
     width: 94px;
   }
 
+  .focus-week-nav,
+  .focus-month-nav {
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+  }
+
   .focus-nav-arrow {
-    justify-self: center;
+    justify-self: auto;
   }
 
   .focus-line-chart-labels {
