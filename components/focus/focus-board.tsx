@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import Link from "next/link";
+import { useActionState, useMemo, useState } from "react";
 import { updateFocusBoardAction, type UpdateFocusBoardState } from "@/app/focus/actions";
 import { FOCUS_BOARD_SLUG, FOCUS_REWARD_TIERS } from "@/lib/focus-board/config";
 import type { FocusBoardData } from "@/lib/focus-board/queries";
@@ -9,7 +10,10 @@ const initialState: UpdateFocusBoardState = {};
 
 type FocusBoardProps = {
   board: FocusBoardData;
+  initialView: "week" | "month";
 };
+
+type FocusView = "week" | "month";
 
 function formatWeekLabel(weekKey: string) {
   const date = new Date(`${weekKey}T00:00:00Z`);
@@ -19,124 +23,462 @@ function formatWeekLabel(weekKey: string) {
   }).format(date);
 }
 
-export function FocusBoard({ board }: FocusBoardProps) {
+function clampPercent(value: number) {
+  return Math.max(0, Math.min(100, value));
+}
+
+function getWeeklyHype(points: number, target: number) {
+  if (points >= target) return "NAILED IT";
+  if (points >= target * 0.75) return "So close";
+  if (points >= target * 0.45) return "Streak warming up";
+  return "Tap the shiny things";
+}
+
+function getMonthlyHype(weeksHit: number) {
+  if (weeksHit >= 4) return "Absolute rocket month";
+  if (weeksHit === 3) return "Serious boss glow";
+  if (weeksHit === 2) return "Momentum is cooking";
+  if (weeksHit === 1) return "First spark lit";
+  return "One tiny win starts the chain";
+}
+
+function getRewardTone(points: number, target: number) {
+  if (points >= target) return "focus-reward-bubble-victory";
+  if (points >= target * 0.6) return "focus-reward-bubble-near";
+  return "focus-reward-bubble-base";
+}
+
+function getTaskBurstText(progress: number, target: number) {
+  if (target === 0) {
+    return progress > 0 ? "BONUS BANKED" : "Bonus ready";
+  }
+
+  if (progress >= target) return "NAILED IT";
+  if (progress > 0) return "Keep feeding the streak";
+  return "Start here";
+}
+
+function buildWeekHref(monthKey: string, weekKey: string, view: FocusView) {
+  return `/focus/${FOCUS_BOARD_SLUG}?month=${monthKey}&week=${weekKey}&view=${view}`;
+}
+
+function buildMonthHref(monthKey: string, view: FocusView) {
+  return `/focus/${FOCUS_BOARD_SLUG}?month=${monthKey}&view=${view}`;
+}
+
+function buildLinePath(values: number[], width: number, height: number) {
+  if (values.length === 0) {
+    return "";
+  }
+
+  const maxValue = Math.max(...values, 1);
+
+  return values
+    .map((value, index) => {
+      const x = values.length === 1 ? width / 2 : (index / (values.length - 1)) * width;
+      const y = height - (value / maxValue) * (height - 10) - 5;
+      return `${index === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
+export function FocusBoard({ board, initialView }: FocusBoardProps) {
   const [state, formAction, pending] = useActionState(updateFocusBoardAction, initialState);
+  const [view, setView] = useState<FocusView>(initialView);
+
+  const currentWeek = board.currentWeek;
+  const weeklyPercent = currentWeek
+    ? clampPercent((currentWeek.weekPoints / board.weeklyTarget) * 100)
+    : 0;
+  const maxRewardPoints = FOCUS_REWARD_TIERS.at(-1)?.minPoints ?? 1;
+  const monthlyPercent = clampPercent((board.monthPoints / maxRewardPoints) * 100);
+
+  const monthRewardCopy = useMemo(() => {
+    if (board.currentReward) {
+      return board.currentReward.label;
+    }
+
+    return "No monthly reward unlocked yet";
+  }, [board.currentReward]);
+
+  const totalBreakdownPoints = board.monthlyBreakdown.reduce((sum, item) => sum + item.points, 0);
+  const pieSegments = useMemo(() => {
+    if (totalBreakdownPoints === 0) {
+      return [];
+    }
+
+    let cursor = 0;
+    const palette = ["#00f5d4", "#95ff4a", "#ff4dca"];
+
+    return board.monthlyBreakdown
+      .filter((item) => item.points > 0)
+      .map((item, index) => {
+        const share = item.points / totalBreakdownPoints;
+        const from = cursor;
+        const to = cursor + share * 360;
+        cursor = to;
+        return {
+          ...item,
+          color: palette[index % palette.length],
+          from,
+          to,
+        };
+      });
+  }, [board.monthlyBreakdown, totalBreakdownPoints]);
+
+  const pieBackground =
+    pieSegments.length > 0
+      ? `conic-gradient(${pieSegments
+          .map((segment) => `${segment.color} ${segment.from}deg ${segment.to}deg`)
+          .join(", ")})`
+      : "conic-gradient(rgba(255,255,255,0.12) 0deg 360deg)";
+
+  const lineValues = board.weeks.map((week) => week.weekPoints);
+  const linePath = buildLinePath(lineValues, 280, 120);
 
   return (
-    <div className="focus-board-shell">
-      <section className="focus-hero-card">
-        <div>
-          <p className="eyebrow">Liona weekly spark board</p>
-          <h1>Small actions. Visible momentum. Better rewards.</h1>
-          <p className="lede">
-            Tap things as they get done, chase the monthly reward, and keep the business-building jobs
-            feeling lighter instead of heavier.
+    <div className="focus-board-shell focus-board-shell-neon">
+      <section className="focus-arcade-hero focus-arcade-hero-rebuilt">
+        <div className="focus-hero-copy-wrap">
+          <p className="focus-kicker">Liona&apos;s tiny-task disco</p>
+          <h1>Business admin, but make it feel like stickers, sparks, and prize tokens.</h1>
+          <p className="focus-hero-copy">
+            This page exists to trick the nervous system into doing the boring growth jobs. Tap, score, collect, repeat.
           </p>
+          <div className="focus-hero-badges">
+            <span>Weekly target: {board.weeklyTarget} pts</span>
+            <span>{board.weeksHit} weeks hit this month</span>
+            <span>{board.monthPoints} points banked</span>
+          </div>
         </div>
-        <div className="focus-reward-panel">
-          <span className="focus-points-badge">{board.monthPoints} pts</span>
-          <h2>{board.currentReward ? board.currentReward.label : "Get the month started"}</h2>
-          <p>{board.currentReward?.description ?? "First points unlock the first reward tier."}</p>
-          {board.nextReward ? (
-            <p className="focus-next-reward">
-              {board.nextReward.minPoints - board.monthPoints} points to unlock <strong>{board.nextReward.label}</strong>.
-            </p>
-          ) : (
-            <p className="focus-next-reward">
-              Top tier unlocked. Time for a proper monthly win.
-            </p>
-          )}
+
+        <div className="focus-hero-stickers">
+          <img
+            alt="Neon cheering mascot sticker"
+            className="focus-hero-sticker focus-hero-sticker-main"
+            src="/focus/mascot-rainbow.svg"
+          />
+          <img
+            alt="Reward burst sticker"
+            className="focus-hero-sticker focus-hero-sticker-float"
+            src="/focus/reward-monster.svg"
+          />
         </div>
       </section>
 
-      <section className="focus-reward-track">
-        {FOCUS_REWARD_TIERS.map((tier) => (
-          <article
-            className={`focus-tier-card ${board.monthPoints >= tier.minPoints ? "focus-tier-card-active" : ""}`}
-            key={tier.label}
-          >
-            <p className="focus-tier-points">{tier.minPoints}+ pts</p>
-            <h3>{tier.label}</h3>
-            <p>{tier.description}</p>
-          </article>
-        ))}
-      </section>
+      <div className="focus-view-switch focus-view-switch-arcade">
+        <button
+          className={`focus-view-chip ${view === "week" ? "focus-view-chip-active" : ""}`}
+          onClick={() => setView("week")}
+          type="button"
+        >
+          This Week
+        </button>
+        <button
+          className={`focus-view-chip ${view === "month" ? "focus-view-chip-active" : ""}`}
+          onClick={() => setView("month")}
+          type="button"
+        >
+          Monthly Rewards
+        </button>
+      </div>
 
       {state.error ? <p className="form-error">{state.error}</p> : null}
 
-      <section className="focus-week-grid">
-        {board.weeks.map((week) => (
-          <article className={`focus-week-card ${week.isCurrent ? "focus-week-card-current" : ""}`} key={week.weekKey}>
-            <div className="focus-week-header">
-              <div>
-                <p className="focus-week-label">{week.isCurrent ? "This week" : "Week of"}</p>
-                <h2>{formatWeekLabel(week.weekKey)}</h2>
+      {view === "week" && currentWeek ? (
+        <div className="focus-scene">
+          <section className="focus-score-splash">
+            <div className="focus-week-nav">
+              {board.navigation.previousWeekKey ? (
+                <Link
+                  className="focus-nav-arrow"
+                  href={buildWeekHref(board.monthKey, board.navigation.previousWeekKey, "week")}
+                  scroll={false}
+                >
+                  &lt;
+                </Link>
+              ) : (
+                <span className="focus-nav-arrow focus-nav-arrow-disabled">&lt;</span>
+              )}
+
+              <div className="focus-week-nav-copy">
+                <p className="focus-panel-label">This week</p>
+                <h2>Week of {formatWeekLabel(currentWeek.weekKey)}</h2>
+                <p className="focus-week-edit-note">
+                  {board.canEditSelectedWeek
+                    ? "This week can be edited."
+                    : "Future weeks are view-only until they arrive."}
+                </p>
               </div>
-              <span className="focus-week-points">{week.weekPoints} pts</span>
+
+              {board.navigation.nextWeekKey ? (
+                board.navigation.canGoNextWeek ? (
+                  <Link
+                    className="focus-nav-arrow"
+                    href={buildWeekHref(board.monthKey, board.navigation.nextWeekKey, "week")}
+                    scroll={false}
+                  >
+                    &gt;
+                  </Link>
+                ) : (
+                  <span className="focus-nav-arrow focus-nav-arrow-disabled">&gt;</span>
+                )
+              ) : (
+                <span className="focus-nav-arrow focus-nav-arrow-disabled">&gt;</span>
+              )}
             </div>
 
-            <div className="focus-task-list">
-              {week.tasks.map((task) => (
-                <section className={`focus-task-card ${task.accentClass}`} key={task.key}>
-                  <div className="focus-task-heading">
-                    <div>
-                      <h3>{task.title}</h3>
-                    </div>
-                    <details className="focus-help">
-                      <summary aria-label={`About ${task.title}`}>?</summary>
-                      <div className="focus-help-popover">{task.description}</div>
-                    </details>
-                  </div>
-                  <div className="focus-metric-list">
-                    {task.metrics.map((metric) => {
-                      const metTarget = metric.target > 0 ? metric.count >= metric.target : metric.count > 0;
+            <div className="focus-score-core">
+              <div className="focus-score-ring">
+                <div className="focus-score-ring-inner">
+                  <strong>{currentWeek.weekPoints}</strong>
+                  <span>points</span>
+                </div>
+              </div>
+            </div>
 
-                      return (
-                        <div className="focus-metric-row" key={metric.key}>
-                          <div>
-                            <p className="focus-metric-label">{metric.label}</p>
-                            <p className="focus-metric-meta">
-                              {metric.points} pts each
-                              {metric.target > 0 ? ` · target ${metric.target}` : " · bonus"}
-                            </p>
+            <div className={`focus-reward-bubble ${getRewardTone(currentWeek.weekPoints, board.weeklyTarget)}`}>
+              <p className="focus-reward-bubble-topline">{getWeeklyHype(currentWeek.weekPoints, board.weeklyTarget)}</p>
+              <p className="focus-reward-bubble-main">
+                {currentWeek.hitTarget
+                  ? "Weekly prize unlocked. Absolutely milk the victory."
+                  : `${Math.max(board.weeklyTarget - currentWeek.weekPoints, 0)} points until the weekly treat.`}
+              </p>
+              <div className="focus-progress-track focus-progress-track-fat">
+                <div className="focus-progress-fill" style={{ width: `${weeklyPercent}%` }} />
+              </div>
+            </div>
+
+            <button className="focus-scene-link" onClick={() => setView("month")} type="button">
+              Jump to the monthly reward ladder
+            </button>
+          </section>
+
+          <section className="focus-task-reel">
+            {currentWeek.tasks.map((task) => (
+              <article className={`focus-task-sticker ${task.accentClass}`} key={task.key}>
+                <div className="focus-task-sticker-top">
+                  <div className="focus-task-sticker-media">
+                    <img alt={task.stickerAlt} className="focus-task-sticker-image" src={task.stickerSrc} />
+                  </div>
+
+                  <div className="focus-task-sticker-copy">
+                    <div className="focus-task-chip">{task.icon}</div>
+                    <h3>{task.title}</h3>
+                    <p>{task.description}</p>
+                  </div>
+
+                  <details className="focus-help focus-help-sticker">
+                    <summary aria-label={`About ${task.title}`}>?</summary>
+                    <div className="focus-help-popover">{task.description}</div>
+                  </details>
+                </div>
+
+                <div className="focus-metric-stack">
+                  {task.metrics.map((metric) => {
+                    const metTarget = metric.target > 0 ? metric.count >= metric.target : metric.count > 0;
+                    const metricPercent =
+                      metric.target > 0 ? clampPercent((metric.count / metric.target) * 100) : metric.count > 0 ? 100 : 0;
+
+                    return (
+                      <div className="focus-metric-bubble" key={metric.key}>
+                        <div className="focus-metric-copy">
+                          <p className="focus-metric-label">{metric.label}</p>
+                          <p className="focus-metric-meta">
+                            {metric.points} pts each
+                            {metric.target > 0 ? ` - target ${metric.target}` : " - bonus"}
+                          </p>
+                          <div className="focus-mini-bar">
+                            <div className="focus-mini-bar-fill" style={{ width: `${metricPercent}%` }} />
                           </div>
-                          <div className="focus-metric-controls">
-                            <form action={formAction}>
-                              <input name="slug" type="hidden" value={FOCUS_BOARD_SLUG} />
-                              <input name="weekKey" type="hidden" value={week.weekKey} />
-                              <input name="monthKey" type="hidden" value={board.monthKey} />
-                              <input name="taskKey" type="hidden" value={task.key} />
-                              <input name="metricKey" type="hidden" value={metric.key} />
-                              <input name="direction" type="hidden" value="remove" />
-                              <button className="focus-icon-button" disabled={pending || metric.count === 0} type="submit">
-                                -
-                              </button>
-                            </form>
-                            <span className={`focus-metric-count ${metTarget ? "focus-metric-count-hit" : ""}`}>
-                              {metric.kind === "toggle" ? (metric.count > 0 ? "Done" : "Tap me") : metric.count}
-                            </span>
-                            <form action={formAction}>
-                              <input name="slug" type="hidden" value={FOCUS_BOARD_SLUG} />
-                              <input name="weekKey" type="hidden" value={week.weekKey} />
-                              <input name="monthKey" type="hidden" value={board.monthKey} />
-                              <input name="taskKey" type="hidden" value={task.key} />
-                              <input name="metricKey" type="hidden" value={metric.key} />
-                              <input name="direction" type="hidden" value="add" />
-                              <button className="focus-icon-button focus-icon-button-plus" disabled={pending} type="submit">
-                                +
-                              </button>
-                            </form>
-                          </div>
+                          <p className={`focus-mini-celebration ${metTarget ? "" : "focus-mini-celebration-soft"}`}>
+                            {getTaskBurstText(metric.count, metric.target)}
+                          </p>
                         </div>
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
+
+                        <div className="focus-metric-controls focus-metric-controls-sticker">
+                          <form action={formAction}>
+                            <input name="slug" type="hidden" value={FOCUS_BOARD_SLUG} />
+                            <input name="weekKey" type="hidden" value={currentWeek.weekKey} />
+                            <input name="monthKey" type="hidden" value={board.monthKey} />
+                            <input name="taskKey" type="hidden" value={task.key} />
+                            <input name="metricKey" type="hidden" value={metric.key} />
+                            <input name="direction" type="hidden" value="remove" />
+                            <button
+                              className="focus-icon-button"
+                              disabled={pending || metric.count === 0 || !board.canEditSelectedWeek}
+                              type="submit"
+                            >
+                              -
+                            </button>
+                          </form>
+
+                          <span className={`focus-metric-count ${metTarget ? "focus-metric-count-hit" : ""}`}>
+                            {metric.kind === "toggle" ? (metric.count > 0 ? "Done!" : "Tap!") : metric.count}
+                          </span>
+
+                          <form action={formAction}>
+                            <input name="slug" type="hidden" value={FOCUS_BOARD_SLUG} />
+                            <input name="weekKey" type="hidden" value={currentWeek.weekKey} />
+                            <input name="monthKey" type="hidden" value={board.monthKey} />
+                            <input name="taskKey" type="hidden" value={task.key} />
+                            <input name="metricKey" type="hidden" value={metric.key} />
+                            <input name="direction" type="hidden" value="add" />
+                            <button
+                              className="focus-icon-button focus-icon-button-plus"
+                              disabled={pending || !board.canEditSelectedWeek}
+                              type="submit"
+                            >
+                              +
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </article>
+            ))}
+          </section>
+
+          <section className="focus-month-peek">
+            <div className="focus-month-peek-copy">
+              <p className="focus-panel-label">{board.monthLabel}</p>
+              <h2>{board.monthPoints} total points</h2>
+              <p>{getMonthlyHype(board.weeksHit)}</p>
             </div>
-          </article>
-        ))}
-      </section>
+            <div className="focus-progress-track focus-progress-track-fat">
+              <div className="focus-progress-fill focus-progress-fill-pink" style={{ width: `${monthlyPercent}%` }} />
+            </div>
+            <p className="focus-month-peek-reward">{monthRewardCopy}</p>
+          </section>
+        </div>
+      ) : (
+        <div className="focus-scene">
+          <section className="focus-month-headline">
+            <div className="focus-month-nav">
+              <Link className="focus-nav-arrow" href={buildMonthHref(board.navigation.previousMonthKey, "month")} scroll={false}>
+                &lt;
+              </Link>
+
+              <div className="focus-month-nav-copy">
+                <p className="focus-panel-label">Monthly rewards</p>
+                <h2>{board.monthLabel}</h2>
+                <p className="focus-hero-copy">The monthly prizes care about total points and how many weeks she actually hit the line.</p>
+              </div>
+
+              {board.navigation.nextMonthKey ? (
+                <Link className="focus-nav-arrow" href={buildMonthHref(board.navigation.nextMonthKey, "month")} scroll={false}>
+                  &gt;
+                </Link>
+              ) : (
+                <span className="focus-nav-arrow focus-nav-arrow-disabled">&gt;</span>
+              )}
+            </div>
+            <img alt="Monthly reward monster sticker" className="focus-month-monster" src="/focus/reward-monster.svg" />
+          </section>
+
+          <section className="focus-month-progress">
+            <div className="focus-month-progress-copy">
+              <strong>{board.monthPoints} pts</strong>
+              <span>{board.weeksHit} weekly wins hit</span>
+            </div>
+            <div className="focus-progress-track focus-progress-track-fat">
+              <div className="focus-progress-fill focus-progress-fill-pink" style={{ width: `${monthlyPercent}%` }} />
+            </div>
+            <button className="focus-scene-link" onClick={() => setView("week")} type="button">
+              Back to this week
+            </button>
+          </section>
+
+          <section className="focus-win-strip focus-win-strip-sticker">
+            {board.weeks.map((week) => (
+              <div className={`focus-win-chip ${week.hitTarget ? "focus-win-chip-hit" : ""}`} key={week.weekKey}>
+                <span>{formatWeekLabel(week.weekKey)}</span>
+                <strong>{week.hitTarget ? "Hit!" : `${week.weekPoints} pts`}</strong>
+              </div>
+            ))}
+          </section>
+
+          <section className="focus-progress-snapshot">
+            <div className="focus-progress-snapshot-head">
+              <div>
+                <p className="focus-panel-label">Progress snapshot</p>
+                <h3>How the points stacked up</h3>
+              </div>
+            </div>
+
+            <div className="focus-progress-story">
+              <div className="focus-line-chart-wrap">
+                <svg aria-label="Weekly points chart" className="focus-line-chart" viewBox="0 0 280 120">
+                  <path d="M0 115 H280" stroke="rgba(255,255,255,0.16)" strokeWidth="2" />
+                  {linePath ? (
+                    <>
+                      <path d={linePath} fill="none" stroke="#00f5d4" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+                      {board.weeks.map((week, index) => {
+                        const maxValue = Math.max(...lineValues, 1);
+                        const x = board.weeks.length === 1 ? 140 : (index / (board.weeks.length - 1)) * 280;
+                        const y = 120 - (week.weekPoints / maxValue) * 110 - 5;
+
+                        return <circle cx={x} cy={y} fill="#ff4dca" key={week.weekKey} r="5" />;
+                      })}
+                    </>
+                  ) : null}
+                </svg>
+                <div className="focus-line-chart-labels">
+                  {board.weeks.map((week) => (
+                    <span key={week.weekKey}>{formatWeekLabel(week.weekKey)}</span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="focus-breakdown-wrap">
+                <div className="focus-breakdown-pie" style={{ background: pieBackground }} />
+                <div className="focus-breakdown-legend">
+                  {board.monthlyBreakdown.map((item, index) => {
+                    const colors = ["#00f5d4", "#95ff4a", "#ff4dca"];
+                    const share = totalBreakdownPoints > 0 ? Math.round((item.points / totalBreakdownPoints) * 100) : 0;
+
+                    return (
+                      <div className="focus-breakdown-item" key={item.key}>
+                        <span className="focus-breakdown-dot" style={{ background: colors[index % colors.length] }} />
+                        <div>
+                          <strong>{item.title}</strong>
+                          <p>
+                            {item.points} pts{share > 0 ? ` - ${share}%` : ""}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="focus-reward-zigzag">
+            {FOCUS_REWARD_TIERS.map((tier, index) => {
+              const unlocked = board.monthPoints >= tier.minPoints && board.weeksHit >= tier.minWeeksHit;
+
+              return (
+                <article
+                  className={`focus-month-tier focus-month-tier-zigzag ${unlocked ? "focus-month-tier-active" : ""} ${
+                    index % 2 === 1 ? "focus-month-tier-offset" : ""
+                  }`}
+                  key={tier.label}
+                >
+                  <p className="focus-tier-points">
+                    {tier.minPoints}+ pts - {tier.minWeeksHit} weeks hit
+                  </p>
+                  <h3>{tier.label}</h3>
+                  <p>{tier.description}</p>
+                  <span className="focus-tier-status">{unlocked ? "Unlocked" : "Locked"}</span>
+                </article>
+              );
+            })}
+          </section>
+        </div>
+      )}
     </div>
   );
 }

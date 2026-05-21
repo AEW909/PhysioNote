@@ -13,6 +13,15 @@ export type UpdateFocusBoardState = {
   error?: string;
 };
 
+function getCurrentWeekKey() {
+  const now = new Date();
+  const copy = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const day = copy.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  copy.setUTCDate(copy.getUTCDate() + diff);
+  return copy.toISOString().slice(0, 10);
+}
+
 export async function updateFocusBoardAction(
   _prevState: UpdateFocusBoardState,
   formData: FormData,
@@ -33,6 +42,10 @@ export async function updateFocusBoardAction(
 
   if (!task || !metric || !weekKey || !monthKey) {
     return { error: "The board action is missing some context." };
+  }
+
+  if (weekKey > getCurrentWeekKey()) {
+    return { error: "Future weeks are locked until they become current." };
   }
 
   const admin = createSupabaseAdminClient();

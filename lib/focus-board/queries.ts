@@ -1,5 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { FOCUS_BOARD_KEY, FOCUS_BOARD_TASKS, FOCUS_REWARD_TIERS } from "@/lib/focus-board/config";
+import { FOCUS_BOARD_KEY, FOCUS_BOARD_TASKS, FOCUS_REWARD_TIERS, FOCUS_WEEKLY_TARGET } from "@/lib/focus-board/config";
 
 type FocusBoardEventRow = {
   id: string;
@@ -10,6 +10,11 @@ type FocusBoardEventRow = {
   metric_key: string;
   points: number;
   created_at: string;
+};
+
+type FocusBoardParams = {
+  month?: string;
+  week?: string;
 };
 
 function getMonthStart(date = new Date()) {
@@ -28,6 +33,25 @@ function getWeekStart(date = new Date()) {
   return copy;
 }
 
+function parseIsoDate(value?: string | null) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function addDays(date: Date, days: number) {
+  const copy = new Date(date);
+  copy.setUTCDate(copy.getUTCDate() + days);
+  return copy;
+}
+
+function addMonths(date: Date, months: number) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1));
+}
+
 function listMonthWeeks(monthStart: Date) {
   const monthEnd = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 0));
   const firstWeekStart = getWeekStart(monthStart);
@@ -42,18 +66,59 @@ function listMonthWeeks(monthStart: Date) {
   return weeks;
 }
 
-export async function getFocusBoardData() {
+function formatMonthLabel(monthKey: string) {
+  const date = parseIsoDate(monthKey);
+
+  if (!date) {
+    return monthKey;
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function buildMonthHistory(currentMonthStart: Date, monthPointMap: Map<string, number>) {
+  return Array.from({ length: 6 }, (_, index) => {
+    const monthStart = addMonths(currentMonthStart, index - 5);
+    const monthKey = toIsoDate(monthStart);
+
+    return {
+      monthKey,
+      label: new Intl.DateTimeFormat("en-GB", { month: "short" }).format(monthStart),
+      points: monthPointMap.get(monthKey) ?? 0,
+      isCurrent: index === 5,
+    };
+  });
+}
+
+export async function getFocusBoardData(params: FocusBoardParams = {}) {
   const admin = createSupabaseAdminClient();
-  const monthStart = getMonthStart();
-  const monthKey = toIsoDate(monthStart);
+  const currentMonthStart = getMonthStart();
+  const currentMonthKey = toIsoDate(currentMonthStart);
   const currentWeekKey = toIsoDate(getWeekStart());
-  const weekKeys = listMonthWeeks(monthStart);
+
+  const requestedMonthStart = parseIsoDate(params.month) ?? currentMonthStart;
+  const selectedMonthStart = getMonthStart(requestedMonthStart);
+  const selectedMonthKey = toIsoDate(selectedMonthStart);
+  const selectedWeekKeys = listMonthWeeks(selectedMonthStart);
+  const requestedWeekKey = params.week && selectedWeekKeys.includes(params.week) ? params.week : undefined;
+  const fallbackWeekKey =
+    selectedMonthKey === currentMonthKey && selectedWeekKeys.includes(currentWeekKey)
+      ? currentWeekKey
+      : selectedWeekKeys.at(0) ?? currentWeekKey;
+  const selectedWeekKey = requestedWeekKey ?? fallbackWeekKey;
+
+  const monthHistoryStart = addMonths(currentMonthStart, -5);
+  const monthHistoryEnd = addMonths(currentMonthStart, 1);
 
   const { data, error } = await admin
     .from("focus_board_events")
     .select("id, board_key, month_key, week_start, task_key, metric_key, points, created_at")
     .eq("board_key", FOCUS_BOARD_KEY)
-    .eq("month_key", monthKey)
+    .gte("month_key", toIsoDate(monthHistoryStart))
+    .lt("month_key", toIsoDate(monthHistoryEnd))
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -62,15 +127,20 @@ export async function getFocusBoardData() {
 
   const events = (data ?? []) as FocusBoardEventRow[];
   const counts = new Map<string, number>();
-  let monthPoints = 0;
+  const monthPointMap = new Map<string, number>();
+  const selectedTaskPointMap = new Map<string, number>();
 
   events.forEach((event) => {
     const key = `${event.week_start}:${event.task_key}:${event.metric_key}`;
     counts.set(key, (counts.get(key) ?? 0) + 1);
-    monthPoints += event.points;
+    monthPointMap.set(event.month_key, (monthPointMap.get(event.month_key) ?? 0) + event.points);
+
+    if (event.month_key === selectedMonthKey) {
+      selectedTaskPointMap.set(event.task_key, (selectedTaskPointMap.get(event.task_key) ?? 0) + event.points);
+    }
   });
 
-  const weeks = weekKeys.map((weekKey) => {
+  const weeks = selectedWeekKeys.map((weekKey) => {
     let weekPoints = 0;
     const tasks = FOCUS_BOARD_TASKS.map((task) => {
       const metrics = task.metrics.map((metric) => {
@@ -92,23 +162,65 @@ export async function getFocusBoardData() {
       weekKey,
       weekPoints,
       isCurrent: weekKey === currentWeekKey,
+      isSelected: weekKey === selectedWeekKey,
+      hitTarget: weekPoints >= FOCUS_WEEKLY_TARGET,
       tasks,
     };
   });
 
-  const currentReward =
-    [...FOCUS_REWARD_TIERS].reverse().find((tier) => monthPoints >= tier.minPoints) ?? null;
+  const monthPoints = monthPointMap.get(selectedMonthKey) ?? 0;
+  const weeksHit = weeks.filter((week) => week.hitTarget).length;
 
-  const nextReward = FOCUS_REWARD_TIERS.find((tier) => monthPoints < tier.minPoints) ?? null;
+  const currentReward =
+    [...FOCUS_REWARD_TIERS]
+      .reverse()
+      .find((tier) => monthPoints >= tier.minPoints && weeksHit >= tier.minWeeksHit) ?? null;
+
+  const nextReward =
+    FOCUS_REWARD_TIERS.find((tier) => monthPoints < tier.minPoints || weeksHit < tier.minWeeksHit) ?? null;
+
+  const selectedWeek = weeks.find((week) => week.weekKey === selectedWeekKey) ?? weeks[0];
+  const selectedWeekIndex = weeks.findIndex((week) => week.weekKey === selectedWeekKey);
+  const previousWeekKey = selectedWeekIndex > 0 ? weeks[selectedWeekIndex - 1]?.weekKey ?? null : null;
+  const nextWeekKey = selectedWeekIndex >= 0 && selectedWeekIndex < weeks.length - 1 ? weeks[selectedWeekIndex + 1]?.weekKey ?? null : null;
+  const canEditSelectedWeek = selectedWeek ? selectedWeek.weekKey <= currentWeekKey : false;
+  const canGoNextWeek = nextWeekKey ? nextWeekKey <= currentWeekKey : false;
+  const previousMonthKey = toIsoDate(addMonths(selectedMonthStart, -1));
+  const nextMonthKey = selectedMonthKey < currentMonthKey ? toIsoDate(addMonths(selectedMonthStart, 1)) : null;
+
+  const monthlyBreakdown = FOCUS_BOARD_TASKS.map((task) => ({
+    key: task.key,
+    title: task.title,
+    accentClass: task.accentClass,
+    points: selectedTaskPointMap.get(task.key) ?? 0,
+  }));
+
+  const monthHistory = buildMonthHistory(currentMonthStart, monthPointMap);
 
   return {
     boardKey: FOCUS_BOARD_KEY,
-    monthKey,
+    monthKey: selectedMonthKey,
+    monthLabel: formatMonthLabel(selectedMonthKey),
+    currentMonthKey,
     currentWeekKey,
     monthPoints,
+    weeksHit,
+    weeklyTarget: FOCUS_WEEKLY_TARGET,
+    currentWeek: selectedWeek,
     weeks,
     currentReward,
     nextReward,
+    canEditSelectedWeek,
+    navigation: {
+      selectedWeekKey,
+      previousWeekKey,
+      nextWeekKey,
+      canGoNextWeek,
+      previousMonthKey,
+      nextMonthKey,
+    },
+    monthlyBreakdown,
+    monthHistory,
   };
 }
 
