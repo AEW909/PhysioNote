@@ -82,6 +82,28 @@ function buildLinePath(values: number[], width: number, height: number) {
     .join(" ");
 }
 
+function buildDonutSegments(values: { color: string; value: number }[], circumference: number) {
+  const total = values.reduce((sum, item) => sum + item.value, 0);
+
+  if (total <= 0) {
+    return [];
+  }
+
+  let offset = 0;
+
+  return values.map((item) => {
+    const length = (item.value / total) * circumference;
+    const segment = {
+      color: item.color,
+      dashArray: `${length} ${circumference - length}`,
+      dashOffset: -offset,
+    };
+
+    offset += length;
+    return segment;
+  });
+}
+
 export function FocusBoard({ board, initialView }: FocusBoardProps) {
   const [state, formAction, pending] = useActionState(updateFocusBoardAction, initialState);
   const [view, setView] = useState<FocusView>(initialView);
@@ -132,12 +154,12 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
       });
   }, [board.monthlyBreakdown, totalBreakdownPoints]);
 
-  const pieBackground =
-    pieSegments.length > 0
-      ? `conic-gradient(${pieSegments
-          .map((segment) => `${segment.color} ${segment.from}deg ${segment.to}deg`)
-          .join(", ")})`
-      : "conic-gradient(rgba(255,255,255,0.12) 0deg 360deg)";
+  const donutRadius = 44;
+  const donutCircumference = 2 * Math.PI * donutRadius;
+  const donutSegments = buildDonutSegments(
+    pieSegments.map((segment) => ({ color: segment.color, value: segment.points })),
+    donutCircumference,
+  );
 
   const lineValues = board.weeks.map((week) => week.weekPoints);
   const linePath = buildLinePath(lineValues, 280, 120);
@@ -455,7 +477,34 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
               </div>
 
               <div className="focus-breakdown-wrap">
-                <div className="focus-breakdown-pie" style={{ background: pieBackground }} />
+                <div className="focus-breakdown-pie">
+                  <svg aria-label="Monthly points breakdown" className="focus-breakdown-donut" viewBox="0 0 112 112">
+                    <circle
+                      cx="56"
+                      cy="56"
+                      fill="none"
+                      r={donutRadius}
+                      stroke="rgba(255,255,255,0.12)"
+                      strokeWidth="18"
+                    />
+                    {donutSegments.map((segment, index) => (
+                      <circle
+                        cx="56"
+                        cy="56"
+                        fill="none"
+                        key={`${segment.color}-${index}`}
+                        r={donutRadius}
+                        stroke={segment.color}
+                        strokeDasharray={segment.dashArray}
+                        strokeDashoffset={segment.dashOffset}
+                        strokeLinecap="round"
+                        strokeWidth="18"
+                        transform="rotate(-90 56 56)"
+                      />
+                    ))}
+                    <circle cx="56" cy="56" fill="rgba(10, 9, 20, 0.96)" r="28" />
+                  </svg>
+                </div>
                 <div className="focus-breakdown-legend">
                   {board.monthlyBreakdown.map((item, index) => {
                     const colors = ["#00f5d4", "#95ff4a", "#ff4dca"];
