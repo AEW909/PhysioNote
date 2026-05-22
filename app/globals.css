@@ -1377,6 +1377,18 @@ a {
   border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
+.focus-reward-bubble-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.focus-reward-bubble-copy {
+  display: grid;
+  gap: 10px;
+}
+
 .focus-reward-bubble-base {
   background: linear-gradient(135deg, rgba(255, 77, 202, 0.12), rgba(142, 93, 255, 0.12));
 }
@@ -1386,7 +1398,15 @@ a {
 }
 
 .focus-reward-bubble-victory {
-  background: linear-gradient(135deg, rgba(255, 216, 77, 0.2), rgba(0, 245, 212, 0.16));
+  background:
+    radial-gradient(circle at top right, rgba(255, 67, 193, 0.28), transparent 32%),
+    radial-gradient(circle at bottom left, rgba(0, 255, 214, 0.24), transparent 34%),
+    linear-gradient(135deg, rgba(255, 216, 77, 0.24), rgba(0, 245, 212, 0.2));
+  border-color: rgba(255, 216, 77, 0.34);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 0 28px rgba(255, 216, 77, 0.12),
+    0 0 44px rgba(0, 245, 212, 0.12);
 }
 
 .focus-reward-bubble-topline {
@@ -1410,6 +1430,38 @@ a {
 
 .focus-progress-track-fat {
   height: 18px;
+}
+
+.focus-reward-bubble-art {
+  width: 112px;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  border-radius: 26px;
+  overflow: hidden;
+  transform: rotate(4deg);
+}
+
+.focus-reward-bubble-art-locked {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.focus-reward-bubble-art-unlocked {
+  background:
+    radial-gradient(circle at top left, rgba(255, 216, 77, 0.28), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(0, 245, 212, 0.2), transparent 34%),
+    rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 216, 77, 0.26);
+  box-shadow:
+    0 0 20px rgba(255, 216, 77, 0.16),
+    0 0 28px rgba(0, 245, 212, 0.12);
+}
+
+.focus-reward-bubble-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .focus-scene-link {
@@ -1753,10 +1805,15 @@ a {
 }
 
 .focus-month-tier-active {
-  border-color: rgba(255, 211, 77, 0.42);
+  background:
+    radial-gradient(circle at top left, rgba(255, 216, 77, 0.26), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(0, 245, 212, 0.24), transparent 30%),
+    linear-gradient(135deg, rgba(255, 82, 191, 0.3), rgba(0, 232, 255, 0.22) 52%, rgba(255, 216, 77, 0.26));
+  border-color: rgba(255, 211, 77, 0.58);
   box-shadow:
     0 22px 60px rgba(0, 0, 0, 0.42),
-    0 0 36px rgba(255, 211, 77, 0.12);
+    0 0 36px rgba(255, 211, 77, 0.18),
+    0 0 48px rgba(0, 245, 212, 0.14);
 }
 
 .focus-tier-status {
@@ -2334,7 +2391,8 @@ a {
   .focus-month-headline,
   .focus-win-strip,
   .focus-month-progress-copy,
-  .focus-breakdown-wrap {
+  .focus-breakdown-wrap,
+  .focus-reward-bubble-layout {
     grid-template-columns: 1fr;
     display: grid;
   }
@@ -2351,6 +2409,13 @@ a {
 
   .focus-month-monster {
     width: 94px;
+  }
+
+  .focus-reward-bubble-art {
+    width: min(100%, 180px);
+    height: auto;
+    aspect-ratio: 1;
+    justify-self: center;
   }
 
   .focus-week-nav,

@@ -87,6 +87,12 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
   const [view, setView] = useState<FocusView>(initialView);
 
   const currentWeek = board.currentWeek;
+  const weeklyPrizeTier = currentWeek?.hitTarget
+    ? board.currentReward ?? FOCUS_REWARD_TIERS[0]
+    : board.nextReward ?? FOCUS_REWARD_TIERS[0];
+  const weeklyPrizeImageSrc = currentWeek?.hitTarget
+    ? weeklyPrizeTier.unlockedStickerSrc
+    : weeklyPrizeTier.lockedStickerSrc;
   const weeklyPercent = currentWeek
     ? clampPercent((currentWeek.weekPoints / board.weeklyTarget) * 100)
     : 0;
@@ -238,14 +244,30 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
             </div>
 
             <div className={`focus-reward-bubble ${getRewardTone(currentWeek.weekPoints, board.weeklyTarget)}`}>
-              <p className="focus-reward-bubble-topline">{getWeeklyHype(currentWeek.weekPoints, board.weeklyTarget)}</p>
-              <p className="focus-reward-bubble-main">
-                {currentWeek.hitTarget
-                  ? "Weekly prize unlocked. Absolutely milk the victory."
-                  : `${Math.max(board.weeklyTarget - currentWeek.weekPoints, 0)} points until the weekly treat.`}
-              </p>
-              <div className="focus-progress-track focus-progress-track-fat">
-                <div className="focus-progress-fill" style={{ width: `${weeklyPercent}%` }} />
+              <div className="focus-reward-bubble-layout">
+                <div className="focus-reward-bubble-copy">
+                  <p className="focus-reward-bubble-topline">{getWeeklyHype(currentWeek.weekPoints, board.weeklyTarget)}</p>
+                  <p className="focus-reward-bubble-main">
+                    {currentWeek.hitTarget
+                      ? `Weekly prize unlocked: ${weeklyPrizeTier.label}. Absolutely milk the victory.`
+                      : `${Math.max(board.weeklyTarget - currentWeek.weekPoints, 0)} points until the weekly treat.`}
+                  </p>
+                  <div className="focus-progress-track focus-progress-track-fat">
+                    <div className="focus-progress-fill" style={{ width: `${weeklyPercent}%` }} />
+                  </div>
+                </div>
+
+                <div
+                  className={`focus-reward-bubble-art ${
+                    currentWeek.hitTarget ? "focus-reward-bubble-art-unlocked" : "focus-reward-bubble-art-locked"
+                  }`}
+                >
+                  <img
+                    alt={weeklyPrizeTier.stickerAlt}
+                    className="focus-reward-bubble-photo"
+                    src={weeklyPrizeImageSrc}
+                  />
+                </div>
               </div>
             </div>
 
@@ -469,7 +491,11 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                 >
                   <div className="focus-month-tier-sticker-wrap">
                     <div className={`focus-liona-reward-art focus-liona-reward-art-${index + 1}`}>
-                      <img alt={tier.stickerAlt} className="focus-liona-reward-photo" src={tier.stickerSrc} />
+                      <img
+                        alt={tier.stickerAlt}
+                        className="focus-liona-reward-photo"
+                        src={unlocked ? tier.unlockedStickerSrc : tier.lockedStickerSrc}
+                      />
                     </div>
                   </div>
                   <p className="focus-tier-points">
