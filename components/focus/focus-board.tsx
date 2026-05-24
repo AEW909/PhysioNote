@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { updateFocusBoardAction, type UpdateFocusBoardState } from "@/app/focus/actions";
-import { FOCUS_BOARD_SLUG, FOCUS_REWARD_TIERS } from "@/lib/focus-board/config";
 import type { FocusBoardData } from "@/lib/focus-board/queries";
 
 const initialState: UpdateFocusBoardState = {};
@@ -58,12 +57,12 @@ function getTaskBurstText(progress: number, target: number) {
   return "Start here";
 }
 
-function buildWeekHref(monthKey: string, weekKey: string, view: FocusView) {
-  return `/focus/${FOCUS_BOARD_SLUG}?month=${monthKey}&week=${weekKey}&view=${view}`;
+function buildWeekHref(boardSlug: string, monthKey: string, weekKey: string, view: FocusView) {
+  return `/focus/${boardSlug}?month=${monthKey}&week=${weekKey}&view=${view}`;
 }
 
-function buildMonthHref(monthKey: string, view: FocusView) {
-  return `/focus/${FOCUS_BOARD_SLUG}?month=${monthKey}&view=${view}`;
+function buildMonthHref(boardSlug: string, monthKey: string, view: FocusView) {
+  return `/focus/${boardSlug}?month=${monthKey}&view=${view}`;
 }
 
 function buildLinePath(values: number[], width: number, height: number) {
@@ -110,15 +109,15 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
 
   const currentWeek = board.currentWeek;
   const weeklyPrizeTier = currentWeek?.hitTarget
-    ? board.currentReward ?? FOCUS_REWARD_TIERS[0]
-    : board.nextReward ?? FOCUS_REWARD_TIERS[0];
+    ? board.currentReward ?? board.rewardTiers[0]
+    : board.nextReward ?? board.rewardTiers[0];
   const weeklyPrizeImageSrc = currentWeek?.hitTarget
     ? weeklyPrizeTier.unlockedStickerSrc
     : weeklyPrizeTier.lockedStickerSrc;
   const weeklyPercent = currentWeek
     ? clampPercent((currentWeek.weekPoints / board.weeklyTarget) * 100)
     : 0;
-  const maxRewardPoints = FOCUS_REWARD_TIERS.at(-1)?.minPoints ?? 1;
+  const maxRewardPoints = board.rewardTiers.at(-1)?.minPoints ?? 1;
   const monthlyPercent = clampPercent((board.monthPoints / maxRewardPoints) * 100);
 
   const monthRewardCopy = useMemo(() => {
@@ -168,8 +167,8 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
     <div className="focus-board-shell focus-board-shell-neon">
       <section className="focus-arcade-hero focus-arcade-hero-rebuilt">
         <div className="focus-hero-copy-wrap">
-          <p className="focus-kicker">Liona&apos;s tiny-task disco</p>
-          <h1>Business admin, but make it feel like stickers, sparks, and prize tokens.</h1>
+          <p className="focus-kicker">{board.settings.title}</p>
+          <h1>{board.settings.subtitle}</h1>
           <p className="focus-hero-copy">
             This page exists to trick the nervous system into doing the boring growth jobs. Tap, score, collect, repeat.
           </p>
@@ -220,7 +219,7 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
               {board.navigation.previousWeekKey ? (
                 <Link
                   className="focus-nav-arrow"
-                  href={buildWeekHref(board.monthKey, board.navigation.previousWeekKey, "week")}
+                  href={buildWeekHref(board.settings.boardSlug, board.monthKey, board.navigation.previousWeekKey, "week")}
                   scroll={false}
                 >
                   &lt;
@@ -243,7 +242,7 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                 board.navigation.canGoNextWeek ? (
                   <Link
                     className="focus-nav-arrow"
-                    href={buildWeekHref(board.monthKey, board.navigation.nextWeekKey, "week")}
+                    href={buildWeekHref(board.settings.boardSlug, board.monthKey, board.navigation.nextWeekKey, "week")}
                     scroll={false}
                   >
                     &gt;
@@ -342,7 +341,7 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
 
                         <div className="focus-metric-controls focus-metric-controls-sticker">
                           <form action={formAction}>
-                            <input name="slug" type="hidden" value={FOCUS_BOARD_SLUG} />
+                            <input name="slug" type="hidden" value={board.settings.boardSlug} />
                             <input name="weekKey" type="hidden" value={currentWeek.weekKey} />
                             <input name="monthKey" type="hidden" value={board.monthKey} />
                             <input name="taskKey" type="hidden" value={task.key} />
@@ -362,7 +361,7 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                           </span>
 
                           <form action={formAction}>
-                            <input name="slug" type="hidden" value={FOCUS_BOARD_SLUG} />
+                            <input name="slug" type="hidden" value={board.settings.boardSlug} />
                             <input name="weekKey" type="hidden" value={currentWeek.weekKey} />
                             <input name="monthKey" type="hidden" value={board.monthKey} />
                             <input name="taskKey" type="hidden" value={task.key} />
@@ -401,7 +400,7 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
         <div className="focus-scene">
           <section className="focus-month-headline">
             <div className="focus-month-nav">
-              <Link className="focus-nav-arrow" href={buildMonthHref(board.navigation.previousMonthKey, "month")} scroll={false}>
+              <Link className="focus-nav-arrow" href={buildMonthHref(board.settings.boardSlug, board.navigation.previousMonthKey, "month")} scroll={false}>
                 &lt;
               </Link>
 
@@ -412,7 +411,7 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
               </div>
 
               {board.navigation.nextMonthKey ? (
-                <Link className="focus-nav-arrow" href={buildMonthHref(board.navigation.nextMonthKey, "month")} scroll={false}>
+                <Link className="focus-nav-arrow" href={buildMonthHref(board.settings.boardSlug, board.navigation.nextMonthKey, "month")} scroll={false}>
                   &gt;
                 </Link>
               ) : (
@@ -528,7 +527,7 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
           </section>
 
           <section className="focus-reward-zigzag">
-            {FOCUS_REWARD_TIERS.map((tier, index) => {
+            {board.rewardTiers.map((tier, index) => {
               const unlocked = board.monthPoints >= tier.minPoints && board.weeksHit >= tier.minWeeksHit;
 
               return (

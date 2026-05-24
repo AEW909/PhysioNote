@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { FOCUS_BOARD_KEY, FOCUS_BOARD_SLUG, FOCUS_BOARD_TASKS } from "@/lib/focus-board/config";
+import { getFocusBoardRuntimeConfigByPublicSlug } from "@/lib/focus-board/runtime";
 
 function getValue(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -33,11 +33,13 @@ export async function updateFocusBoardAction(
   const metricKey = getValue(formData, "metricKey");
   const direction = getValue(formData, "direction");
 
-  if (slug !== FOCUS_BOARD_SLUG) {
+  const runtime = await getFocusBoardRuntimeConfigByPublicSlug(slug);
+
+  if (!runtime) {
     return { error: "This focus board link is not valid." };
   }
 
-  const task = FOCUS_BOARD_TASKS.find((item) => item.key === taskKey);
+  const task = runtime.tasks.find((item) => item.key === taskKey);
   const metric = task?.metrics.find((item) => item.key === metricKey);
 
   if (!task || !metric || !weekKey || !monthKey) {
@@ -52,7 +54,7 @@ export async function updateFocusBoardAction(
 
   if (direction === "add") {
     const { error } = await admin.from("focus_board_events").insert({
-      board_key: FOCUS_BOARD_KEY,
+      board_key: runtime.settings.boardKey,
       month_key: monthKey,
       week_start: weekKey,
       task_key: taskKey,
@@ -67,7 +69,7 @@ export async function updateFocusBoardAction(
     const { data: latest, error: fetchError } = await admin
       .from("focus_board_events")
       .select("id")
-      .eq("board_key", FOCUS_BOARD_KEY)
+      .eq("board_key", runtime.settings.boardKey)
       .eq("month_key", monthKey)
       .eq("week_start", weekKey)
       .eq("task_key", taskKey)
@@ -89,6 +91,6 @@ export async function updateFocusBoardAction(
     }
   }
 
-  revalidatePath(`/focus/${FOCUS_BOARD_SLUG}`);
+  revalidatePath(`/focus/${runtime.settings.boardSlug}`);
   return {};
 }

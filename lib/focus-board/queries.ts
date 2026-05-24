@@ -1,5 +1,6 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { FOCUS_BOARD_KEY, FOCUS_BOARD_TASKS, FOCUS_REWARD_TIERS, FOCUS_WEEKLY_TARGET } from "@/lib/focus-board/config";
+import { FOCUS_BOARD_KEY } from "@/lib/focus-board/config";
+import { getFocusBoardRuntimeConfig } from "@/lib/focus-board/runtime";
 
 type FocusBoardEventRow = {
   id: string;
@@ -95,6 +96,7 @@ function buildMonthHistory(currentMonthStart: Date, monthPointMap: Map<string, n
 
 export async function getFocusBoardData(params: FocusBoardParams = {}) {
   const admin = createSupabaseAdminClient();
+  const runtime = await getFocusBoardRuntimeConfig();
   const currentMonthStart = getMonthStart();
   const currentMonthKey = toIsoDate(currentMonthStart);
   const currentWeekKey = toIsoDate(getWeekStart());
@@ -142,7 +144,7 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
 
   const weeks = selectedWeekKeys.map((weekKey) => {
     let weekPoints = 0;
-    const tasks = FOCUS_BOARD_TASKS.map((task) => {
+    const tasks = runtime.tasks.map((task) => {
       const metrics = task.metrics.map((metric) => {
         const count = counts.get(`${weekKey}:${task.key}:${metric.key}`) ?? 0;
         weekPoints += count * metric.points;
@@ -163,7 +165,7 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
       weekPoints,
       isCurrent: weekKey === currentWeekKey,
       isSelected: weekKey === selectedWeekKey,
-      hitTarget: weekPoints >= FOCUS_WEEKLY_TARGET,
+      hitTarget: weekPoints >= runtime.settings.weeklyTarget,
       tasks,
     };
   });
@@ -172,12 +174,12 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
   const weeksHit = weeks.filter((week) => week.hitTarget).length;
 
   const currentReward =
-    [...FOCUS_REWARD_TIERS]
+    [...runtime.rewards]
       .reverse()
       .find((tier) => monthPoints >= tier.minPoints && weeksHit >= tier.minWeeksHit) ?? null;
 
   const nextReward =
-    FOCUS_REWARD_TIERS.find((tier) => monthPoints < tier.minPoints || weeksHit < tier.minWeeksHit) ?? null;
+    runtime.rewards.find((tier) => monthPoints < tier.minPoints || weeksHit < tier.minWeeksHit) ?? null;
 
   const selectedWeek = weeks.find((week) => week.weekKey === selectedWeekKey) ?? weeks[0];
   const selectedWeekIndex = weeks.findIndex((week) => week.weekKey === selectedWeekKey);
@@ -188,7 +190,7 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
   const previousMonthKey = toIsoDate(addMonths(selectedMonthStart, -1));
   const nextMonthKey = selectedMonthKey < currentMonthKey ? toIsoDate(addMonths(selectedMonthStart, 1)) : null;
 
-  const monthlyBreakdown = FOCUS_BOARD_TASKS.map((task) => ({
+  const monthlyBreakdown = runtime.tasks.map((task) => ({
     key: task.key,
     title: task.title,
     accentClass: task.accentClass,
@@ -205,12 +207,14 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
     currentWeekKey,
     monthPoints,
     weeksHit,
-    weeklyTarget: FOCUS_WEEKLY_TARGET,
+    weeklyTarget: runtime.settings.weeklyTarget,
     currentWeek: selectedWeek,
     weeks,
     currentReward,
     nextReward,
     canEditSelectedWeek,
+    settings: runtime.settings,
+    rewardTiers: runtime.rewards,
     navigation: {
       selectedWeekKey,
       previousWeekKey,

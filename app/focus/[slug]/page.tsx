@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { FocusBoard } from "@/components/focus/focus-board";
-import { FOCUS_BOARD_SLUG } from "@/lib/focus-board/config";
+import { getFocusBoardRuntimeConfigByPublicSlug } from "@/lib/focus-board/runtime";
 import { getFocusBoardData } from "@/lib/focus-board/queries";
 
 type FocusBoardPageProps = {
@@ -12,7 +12,9 @@ export default async function FocusBoardPage({ params, searchParams }: FocusBoar
   const { slug } = await params;
   const query = await searchParams;
 
-  if (slug !== FOCUS_BOARD_SLUG) {
+  const config = await getFocusBoardRuntimeConfigByPublicSlug(slug);
+
+  if (!config) {
     notFound();
   }
 
