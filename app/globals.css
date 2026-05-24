@@ -1106,6 +1106,30 @@ a {
   margin-top: 0;
 }
 
+.focus-control-page .eyebrow {
+  color: #59f4d6;
+}
+
+.focus-control-page h2,
+.focus-control-page h3,
+.focus-control-page strong,
+.focus-control-page label span {
+  color: #fff;
+}
+
+.focus-control-page .field input,
+.focus-control-page .field textarea,
+.focus-control-page .select-field {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f4f0ff;
+}
+
+.focus-control-page .field input::placeholder,
+.focus-control-page .field textarea::placeholder {
+  color: rgba(244, 240, 255, 0.44);
+}
+
 .focus-control-grid,
 .focus-control-two-up,
 .focus-control-three-up {
@@ -1136,9 +1160,16 @@ a {
 .focus-control-task-panel,
 .focus-control-reward-row,
 .focus-control-link-card {
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(0, 245, 212, 0.1), transparent 26%),
+    radial-gradient(circle at bottom right, rgba(255, 77, 202, 0.12), transparent 30%),
+    rgba(10, 9, 20, 0.92);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 20px 54px rgba(0, 0, 0, 0.42),
+    0 0 40px rgba(63, 255, 218, 0.08);
 }
 
 .focus-control-card {
@@ -1170,7 +1201,7 @@ a {
 
 .focus-control-link-card p {
   margin: 0;
-  color: var(--muted);
+  color: rgba(244, 240, 255, 0.72);
   overflow-wrap: anywhere;
 }
 
@@ -1180,13 +1211,36 @@ a {
   gap: 12px;
   align-items: end;
   padding: 14px;
-  border-radius: 18px;
-  background: rgba(247, 250, 248, 0.9);
-  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .focus-control-metric-row-new {
-  background: rgba(42, 141, 143, 0.08);
+  background:
+    radial-gradient(circle at top left, rgba(149, 255, 74, 0.12), transparent 28%),
+    rgba(255, 255, 255, 0.05);
+}
+
+.focus-control-inline-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.focus-control-page .button-secondary {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+}
+
+.focus-control-page .button-primary {
+  background: linear-gradient(135deg, #00e8ff 0%, #ff1aa8 100%);
+  box-shadow: 0 0 20px rgba(255, 26, 168, 0.22);
+}
+
+.focus-control-page .button-danger {
+  background: linear-gradient(135deg, #ff6b57 0%, #ff1aa8 100%);
+  border-color: transparent;
 }
 
 .focus-public-page-neon {

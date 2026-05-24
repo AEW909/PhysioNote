@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import {
   addFocusBoardMetricAction,
   addFocusBoardTaskAction,
+  deleteFocusBoardMetricAction,
+  deleteFocusBoardTaskAction,
   updateFocusBoardMetricAction,
   updateFocusBoardSettingsAction,
   updateFocusBoardTaskAction,
@@ -22,11 +24,11 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
   }
 
   return (
-    <main className="shell focus-control-page">
-      <section className="focus-control-hero card">
-        <p className="eyebrow">Secret focus control room</p>
+    <main className="shell focus-public-page focus-public-page-neon focus-board-shell-neon focus-control-page">
+      <section className="focus-arcade-hero focus-control-hero">
+        <p className="focus-kicker">Secret focus control room</p>
         <h1>Tune the game board</h1>
-        <p className="lede">
+        <p className="focus-hero-copy">
           Change the weekly target, add new goals, adjust point weights, and reshape the reward ladder without touching code again.
         </p>
         <div className="focus-control-links">
@@ -42,7 +44,7 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
       </section>
 
       <section className="focus-control-grid">
-        <article className="card focus-control-card">
+        <article className="focus-control-card">
           <div className="split-header">
             <div>
               <p className="eyebrow">Board settings</p>
@@ -70,7 +72,7 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
           </form>
         </article>
 
-        <article className="card focus-control-card">
+        <article className="focus-control-card">
           <div className="split-header">
             <div>
               <p className="eyebrow">Add a goal</p>
@@ -137,7 +139,7 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
       </section>
 
       <section className="focus-control-stack">
-        <article className="card focus-control-card">
+        <article className="focus-control-card">
           <div className="split-header">
             <div>
               <p className="eyebrow">Goals</p>
@@ -180,11 +182,20 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
                   </button>
                 </form>
 
+                <form action={deleteFocusBoardTaskAction} className="focus-control-inline-action">
+                  <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
+                  <input name="taskId" type="hidden" value={task.id} />
+                  <button className="button button-danger button-small" type="submit">
+                    Delete challenge
+                  </button>
+                </form>
+
                 <div className="focus-control-metric-stack">
                   {task.metrics.map((metric) => (
                     <form action={updateFocusBoardMetricAction} className="focus-control-metric-row" key={metric.id ?? metric.key}>
                       <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
                       <input name="metricId" type="hidden" value={metric.id} />
+                      <input name="taskId" type="hidden" value={task.id} />
                       <label className="field">
                         <span>Metric label</span>
                         <input defaultValue={metric.label} name="label" />
@@ -206,6 +217,21 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
                       </label>
                       <button className="button button-secondary button-small" type="submit">
                         Save metric
+                      </button>
+                    </form>
+                  ))}
+
+                  {task.metrics.map((metric) => (
+                    <form action={deleteFocusBoardMetricAction} className="focus-control-inline-action" key={`${metric.id ?? metric.key}-delete`}>
+                      <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
+                      <input name="taskId" type="hidden" value={task.id} />
+                      <input name="metricId" type="hidden" value={metric.id} />
+                      <button
+                        className="button button-danger button-small"
+                        disabled={task.metrics.length <= 1}
+                        type="submit"
+                      >
+                        {task.metrics.length <= 1 ? "Delete whole challenge instead" : `Delete metric: ${metric.label}`}
                       </button>
                     </form>
                   ))}
@@ -242,7 +268,7 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
           </div>
         </article>
 
-        <article className="card focus-control-card">
+        <article className="focus-control-card">
           <div className="split-header">
             <div>
               <p className="eyebrow">Prizes</p>
@@ -300,4 +326,3 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
     </main>
   );
 }
-

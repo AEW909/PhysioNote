@@ -147,6 +147,26 @@ export async function updateFocusBoardTaskAction(formData: FormData) {
   redirect(`/focus-control/${runtime.settings.adminSlug}`);
 }
 
+export async function deleteFocusBoardTaskAction(formData: FormData) {
+  const adminSlug = getValue(formData, "adminSlug");
+  const runtime = await getAdminContext(adminSlug);
+  const admin = createSupabaseAdminClient();
+
+  const taskId = getValue(formData, "taskId");
+  if (!taskId) {
+    throw new Error("Task id missing.");
+  }
+
+  await admin
+    .from("focus_board_tasks")
+    .delete()
+    .eq("id", taskId)
+    .eq("board_key", FOCUS_BOARD_KEY);
+
+  revalidateFocusPaths(runtime.settings.boardSlug, runtime.settings.adminSlug);
+  redirect(`/focus-control/${runtime.settings.adminSlug}`);
+}
+
 export async function addFocusBoardMetricAction(formData: FormData) {
   const adminSlug = getValue(formData, "adminSlug");
   const runtime = await getAdminContext(adminSlug);
@@ -202,6 +222,33 @@ export async function updateFocusBoardMetricAction(formData: FormData) {
   redirect(`/focus-control/${runtime.settings.adminSlug}`);
 }
 
+export async function deleteFocusBoardMetricAction(formData: FormData) {
+  const adminSlug = getValue(formData, "adminSlug");
+  const runtime = await getAdminContext(adminSlug);
+  const admin = createSupabaseAdminClient();
+
+  const metricId = getValue(formData, "metricId");
+  const taskId = getValue(formData, "taskId");
+
+  if (!metricId || !taskId) {
+    throw new Error("Metric context missing.");
+  }
+
+  const task = runtime.tasks.find((item) => item.id === taskId);
+  if (!task) {
+    throw new Error("Task not found.");
+  }
+
+  if (task.metrics.length <= 1) {
+    throw new Error("Delete the whole challenge instead of removing its final metric.");
+  }
+
+  await admin.from("focus_board_task_metrics").delete().eq("id", metricId);
+
+  revalidateFocusPaths(runtime.settings.boardSlug, runtime.settings.adminSlug);
+  redirect(`/focus-control/${runtime.settings.adminSlug}`);
+}
+
 export async function updateFocusRewardTierAction(formData: FormData) {
   const adminSlug = getValue(formData, "adminSlug");
   const runtime = await getAdminContext(adminSlug);
@@ -229,4 +276,3 @@ export async function updateFocusRewardTierAction(formData: FormData) {
   revalidateFocusPaths(runtime.settings.boardSlug, runtime.settings.adminSlug);
   redirect(`/focus-control/${runtime.settings.adminSlug}`);
 }
-
