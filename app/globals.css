@@ -1230,6 +1230,33 @@ a {
   justify-content: flex-end;
 }
 
+.focus-control-task-status-row {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.focus-control-task-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.focus-control-task-status-live {
+  background: rgba(0, 245, 212, 0.14);
+  color: #59f4d6;
+}
+
+.focus-control-task-status-hidden {
+  background: rgba(255, 216, 77, 0.14);
+  color: #ffd84d;
+}
+
 .focus-control-page .split-header {
   align-items: center;
 }

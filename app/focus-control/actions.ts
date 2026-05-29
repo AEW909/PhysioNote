@@ -147,6 +147,30 @@ export async function updateFocusBoardTaskAction(formData: FormData) {
   redirect(`/focus-control/${runtime.settings.adminSlug}`);
 }
 
+export async function toggleFocusBoardTaskVisibilityAction(formData: FormData) {
+  const adminSlug = getValue(formData, "adminSlug");
+  const runtime = await getAdminContext(adminSlug);
+  const admin = createSupabaseAdminClient();
+
+  const taskId = getValue(formData, "taskId");
+  const nextVisible = getValue(formData, "nextVisible");
+
+  if (!taskId) {
+    throw new Error("Task id missing.");
+  }
+
+  await admin
+    .from("focus_board_tasks")
+    .update({
+      is_active: nextVisible === "true",
+    })
+    .eq("id", taskId)
+    .eq("board_key", FOCUS_BOARD_KEY);
+
+  revalidateFocusPaths(runtime.settings.boardSlug, runtime.settings.adminSlug);
+  redirect(`/focus-control/${runtime.settings.adminSlug}`);
+}
+
 export async function deleteFocusBoardTaskAction(formData: FormData) {
   const adminSlug = getValue(formData, "adminSlug");
   const runtime = await getAdminContext(adminSlug);

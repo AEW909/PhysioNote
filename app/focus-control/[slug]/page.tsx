@@ -4,6 +4,7 @@ import {
   addFocusBoardTaskAction,
   deleteFocusBoardMetricAction,
   deleteFocusBoardTaskAction,
+  toggleFocusBoardTaskVisibilityAction,
   updateFocusBoardMetricAction,
   updateFocusBoardSettingsAction,
   updateFocusBoardTaskAction,
@@ -149,7 +150,7 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
           </div>
 
           <div className="focus-control-stack">
-            {runtime.tasks.map((task) => (
+            {runtime.allTasks.map((task) => (
               <section className="focus-control-task-panel" key={task.id ?? task.key}>
                 <div className="focus-control-corner-action">
                   <FocusDeleteButton
@@ -189,8 +190,22 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
                       <input defaultValue={task.stickerAlt} name="stickerAlt" />
                     </label>
                   </div>
+                  <div className="focus-control-task-status-row">
+                    <span className={`focus-control-task-status ${task.isActive ? "focus-control-task-status-live" : "focus-control-task-status-hidden"}`}>
+                      {task.isActive ? "Visible on Liona's board" : "Hidden from Liona's board"}
+                    </span>
+                  </div>
                   <button className="button button-secondary" type="submit">
                     Save goal details
+                  </button>
+                </form>
+
+                <form action={toggleFocusBoardTaskVisibilityAction} className="focus-control-inline-action">
+                  <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
+                  <input name="taskId" type="hidden" value={task.id} />
+                  <input name="nextVisible" type="hidden" value={task.isActive ? "false" : "true"} />
+                  <button className="button button-secondary button-small" type="submit">
+                    {task.isActive ? "Hide goal for now" : "Show goal again"}
                   </button>
                 </form>
 
