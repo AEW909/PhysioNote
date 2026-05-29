@@ -11,6 +11,38 @@ type FocusControlPageProps = {
   params: Promise<{ slug: string }>;
 };
 
+type FocusControlSectionProps = {
+  eyebrow: string;
+  title: string;
+  summary?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+};
+
+function FocusControlSection({
+  eyebrow,
+  title,
+  summary,
+  defaultOpen = false,
+  children,
+}: FocusControlSectionProps) {
+  return (
+    <details className="focus-control-section" open={defaultOpen}>
+      <summary className="focus-control-section-summary">
+        <div className="focus-control-section-copy">
+          <p className="eyebrow">{eyebrow}</p>
+          <h2>{title}</h2>
+          {summary ? <p>{summary}</p> : null}
+        </div>
+        <span className="focus-control-collapse-icon" aria-hidden="true">
+          +
+        </span>
+      </summary>
+      <article className="focus-control-card focus-control-section-body">{children}</article>
+    </details>
+  );
+}
+
 export default async function FocusControlPage({ params }: FocusControlPageProps) {
   const { slug } = await params;
   const runtime = await getFocusBoardRuntimeConfigByAdminSlug(slug);
@@ -40,14 +72,11 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
       </section>
 
       <section className="focus-control-grid">
-        <article className="focus-control-card">
-          <div className="split-header">
-            <div>
-              <p className="eyebrow">Board settings</p>
-              <h2>Weekly target + headline</h2>
-            </div>
-          </div>
-
+        <FocusControlSection
+          eyebrow="Board settings"
+          summary="Weekly target, title, and the bit of hype text at the top."
+          title="Weekly target + headline"
+        >
           <form action={updateFocusBoardSettingsAction} className="focus-control-form">
             <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
             <label className="field">
@@ -66,16 +95,13 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
               Save board settings
             </button>
           </form>
-        </article>
+        </FocusControlSection>
 
-        <article className="focus-control-card">
-          <div className="split-header">
-            <div>
-              <p className="eyebrow">Add a goal</p>
-              <h2>New weekly challenge</h2>
-            </div>
-          </div>
-
+        <FocusControlSection
+          eyebrow="Add a goal"
+          summary="Create a fresh weekly challenge and give it its first scoring metric."
+          title="New weekly challenge"
+        >
           <form action={addFocusBoardTaskAction} className="focus-control-form">
             <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
             <div className="focus-control-two-up">
@@ -131,34 +157,29 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
               Add weekly goal
             </button>
           </form>
-        </article>
+        </FocusControlSection>
       </section>
 
       <section className="focus-control-stack">
-        <article className="focus-control-card">
-          <div className="split-header">
-            <div>
-              <p className="eyebrow">Goals</p>
-              <h2>Existing weekly challenges</h2>
-            </div>
-          </div>
-
+        <FocusControlSection
+          defaultOpen
+          eyebrow="Goals"
+          summary={`${runtime.allTasks.length} challenge${runtime.allTasks.length === 1 ? "" : "s"} currently on the board.`}
+          title="Existing weekly challenges"
+        >
           <div className="focus-control-stack">
             <FocusControlExistingGoals
               adminSlug={runtime.settings.adminSlug}
               tasks={runtime.allTasks}
             />
           </div>
-        </article>
+        </FocusControlSection>
 
-        <article className="focus-control-card">
-          <div className="split-header">
-            <div>
-              <p className="eyebrow">Prizes</p>
-              <h2>Reward ladder</h2>
-            </div>
-          </div>
-
+        <FocusControlSection
+          eyebrow="Prizes"
+          summary="Locked and unlocked reward art, thresholds, and tier copy."
+          title="Reward ladder"
+        >
           <div className="focus-control-stack">
             {runtime.rewards.map((reward) => (
               <form action={updateFocusRewardTierAction} className="focus-control-reward-row" key={reward.id ?? reward.label}>
@@ -204,7 +225,7 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
               </form>
             ))}
           </div>
-        </article>
+        </FocusControlSection>
       </section>
     </main>
   );

@@ -1178,6 +1178,81 @@ a {
   padding: 22px;
 }
 
+.focus-control-section {
+  display: grid;
+  gap: 12px;
+}
+
+.focus-control-section summary {
+  list-style: none;
+}
+
+.focus-control-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.focus-control-section-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  cursor: pointer;
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(0, 245, 212, 0.08), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(255, 77, 202, 0.08), transparent 28%),
+    rgba(10, 9, 20, 0.9);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 16px 38px rgba(0, 0, 0, 0.28);
+}
+
+.focus-control-section-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.focus-control-section-copy h2 {
+  margin: 0;
+}
+
+.focus-control-section-copy p:last-child {
+  margin: 0;
+  color: rgba(244, 240, 255, 0.72);
+}
+
+.focus-control-section[open] .focus-control-collapse-icon {
+  background: rgba(89, 244, 214, 0.1);
+  color: #59f4d6;
+}
+
+.focus-control-section[open] .focus-control-collapse-icon::before {
+  content: "-";
+}
+
+.focus-control-section:not([open]) .focus-control-collapse-icon::before {
+  content: "+";
+}
+
+.focus-control-section .focus-control-collapse-icon {
+  color: transparent;
+  position: relative;
+}
+
+.focus-control-section .focus-control-collapse-icon::before {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+
+.focus-control-section-body {
+  padding: 22px;
+}
+
 .focus-control-task-panel,
 .focus-control-reward-row {
   padding: 16px;
