@@ -39,11 +39,15 @@ export async function updateFocusBoardAction(
     return { error: "This focus board link is not valid." };
   }
 
-  const task = runtime.tasks.find((item) => item.key === taskKey);
+  const task = runtime.allTasks.find((item) => item.key === taskKey);
   const metric = task?.metrics.find((item) => item.key === metricKey);
 
   if (!task || !metric || !weekKey || !monthKey) {
     return { error: "The board action is missing some context." };
+  }
+
+  if (task.isActive === false || task.isVisible === false || metric.isActive === false) {
+    return { error: "That challenge has changed, so please refresh the board and try again." };
   }
 
   if (weekKey > getCurrentWeekKey()) {

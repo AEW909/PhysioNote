@@ -177,6 +177,14 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
             <span>{board.weeksHit} weeks hit this month</span>
             <span>{board.monthPoints} points banked</span>
           </div>
+          <a
+            className="focus-content-launch-link"
+            href={`/focus-content/${board.settings.boardSlug}`}
+            rel="noreferrer"
+            target="_blank"
+          >
+            Open Content Lab
+          </a>
         </div>
 
         <div className="focus-hero-stickers">

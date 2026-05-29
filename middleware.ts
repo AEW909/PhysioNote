@@ -14,7 +14,9 @@ function isPublicPath(pathname: string) {
   if (pathname.startsWith("/auth")) return true;
   if (pathname.startsWith("/consents/acupuncture/")) return true;
   if (pathname.startsWith("/focus/")) return true;
+  if (pathname.startsWith("/focus-content/")) return true;
   if (pathname.startsWith("/focus-control/")) return true;
+  if (pathname.startsWith("/api/focus-content")) return true;
   if (pathname.startsWith("/api/health")) return true;
   if (pathname.startsWith("/_next")) return true;
   return false;
