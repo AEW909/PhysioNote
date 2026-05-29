@@ -103,7 +103,7 @@ Topic / brief: ${topic}
 Please write the content now, ready to use.`;
 
   try {
-    const model = "claude-sonnet-4-20250514";
+    const model = "claude-sonnet-4-6";
 
     const modelResponse = await fetch(`https://api.anthropic.com/v1/models/${model}`, {
       method: "GET",
