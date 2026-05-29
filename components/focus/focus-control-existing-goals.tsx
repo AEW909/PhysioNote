@@ -235,7 +235,15 @@ function FocusControlTaskEditor({ adminSlug, task, onDirtyChange }: FocusControl
         </summary>
 
         <div className="focus-control-task-panel focus-control-task-panel-rich">
-          <div className="focus-control-corner-action">
+          <div className="focus-control-corner-actions">
+            <button
+              aria-label={isVisible ? `Hide ${task.title}` : `Show ${task.title}`}
+              className={`focus-visibility-icon ${isVisible ? "focus-visibility-icon-live" : "focus-visibility-icon-hidden"}`}
+              onClick={toggleVisibility}
+              type="button"
+            >
+              {isVisible ? "◉" : "○"}
+            </button>
             <FocusDeleteButton
               action={deleteFocusBoardTaskAction}
               confirmMessage={`Delete "${task.title}" from future use? Existing historical points will be preserved.`}
@@ -302,12 +310,6 @@ function FocusControlTaskEditor({ adminSlug, task, onDirtyChange }: FocusControl
               {taskSaved ? <span className="focus-control-saved-tag">SAVED!</span> : null}
               {taskError ? <span className="focus-control-error-tag">{taskError}</span> : null}
             </div>
-          </div>
-
-          <div className="focus-control-inline-action focus-control-inline-action-wide">
-            <button className="button button-secondary button-small" onClick={toggleVisibility} type="button">
-              {isVisible ? "Hide goal for now" : "Show goal again"}
-            </button>
           </div>
 
           <div className="focus-control-metric-stack">
