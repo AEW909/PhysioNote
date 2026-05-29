@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getServerEnv } from "@/lib/env";
 
 const SYSTEM_PROMPT = `You are a specialist copywriter for Skin Revive Aesthetics, a clinical aesthetics practice in Lancaster run by Liona Harris - an HCPC-registered physiotherapist with 15 years clinical experience and 3 years in aesthetics. The practice is based at 3-1-5 Health Club, Mannin Way, Lancaster. The website is skinreviveaesthetics.com.
 
@@ -53,15 +54,36 @@ type FocusContentPayload = {
   topic?: string;
 };
 
-export async function POST(request: Request) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+type OpenAIResponsesPayload = {
+  output_text?: string;
+  output?: Array<{
+    content?: Array<{
+      text?: string;
+    }>;
+  }>;
+  error?: {
+    message?: string;
+  };
+};
 
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY is not configured." },
-      { status: 500 },
-    );
+function extractOutputText(payload: OpenAIResponsesPayload) {
+  if (typeof payload.output_text === "string" && payload.output_text.trim()) {
+    return payload.output_text.trim();
   }
+
+  for (const item of payload.output ?? []) {
+    for (const contentItem of item.content ?? []) {
+      if (typeof contentItem.text === "string" && contentItem.text.trim()) {
+        return contentItem.text.trim();
+      }
+    }
+  }
+
+  return null;
+}
+
+export async function POST(request: Request) {
+  const env = getServerEnv();
 
   const { channel, format, tone, topic } = (await request.json()) as FocusContentPayload;
 
@@ -77,42 +99,34 @@ Topic / brief: ${topic}
 Please write the content now, ready to use.`;
 
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        Authorization: `Bearer ${env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-0",
-        max_tokens: 1000,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userPrompt }],
+        model: "gpt-4o-mini",
+        instructions: SYSTEM_PROMPT,
+        max_output_tokens: 1000,
+        input: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: userPrompt,
+              },
+            ],
+          },
+        ],
       }),
     });
 
-    const data = (await response.json()) as {
-      error?:
-        | {
-            type?: string;
-            message?: string;
-          }
-        | string
-        | unknown;
-      content?: Array<{ type: string; text?: string }>;
-    };
+    const data = (await response.json()) as OpenAIResponsesPayload;
 
     if (!response.ok) {
-      const detail =
-        typeof data.error === "string"
-          ? data.error
-          : data.error &&
-              typeof data.error === "object" &&
-              "message" in data.error &&
-              typeof data.error.message === "string"
-            ? data.error.message
-            : `Anthropic returned status ${response.status}.`;
+      const detail = data.error?.message ?? `OpenAI returned status ${response.status}.`;
 
       return NextResponse.json(
         { error: detail, detail: data.error ?? data },
@@ -120,7 +134,7 @@ Please write the content now, ready to use.`;
       );
     }
 
-    const text = data.content?.find((block) => block.type === "text")?.text?.trim();
+    const text = extractOutputText(data);
 
     if (!text) {
       return NextResponse.json({ error: "No content returned." }, { status: 502 });
