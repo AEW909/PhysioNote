@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   addFocusBoardMetricAction,
   deleteFocusBoardMetricAction,
@@ -150,6 +151,7 @@ type FocusControlTaskEditorProps = {
 };
 
 function FocusControlTaskEditor({ adminSlug, task, onDirtyChange }: FocusControlTaskEditorProps) {
+  const router = useRouter();
   const [taskDraft, setTaskDraft] = useState<TaskDraft>(() => taskToDraft(task));
   const [taskBaseline, setTaskBaseline] = useState<TaskDraft>(() => taskToDraft(task));
   const [taskSaved, setTaskSaved] = useState(false);
@@ -186,6 +188,7 @@ function FocusControlTaskEditor({ adminSlug, task, onDirtyChange }: FocusControl
         setTaskBaseline(taskDraft);
         setTaskSaved(true);
         setTaskError(null);
+        router.refresh();
         window.setTimeout(() => setTaskSaved(false), 1800);
       } catch (error) {
         setTaskError(error instanceof Error ? error.message : "Could not save the goal details.");
@@ -201,6 +204,7 @@ function FocusControlTaskEditor({ adminSlug, task, onDirtyChange }: FocusControl
       formData.set("nextVisible", isVisible ? "false" : "true");
       await toggleFocusBoardTaskVisibilityAction(formData);
       setIsVisible((current) => !current);
+      router.refresh();
     });
   };
 
@@ -225,7 +229,7 @@ function FocusControlTaskEditor({ adminSlug, task, onDirtyChange }: FocusControl
                 isVisible ? "focus-control-task-status-live" : "focus-control-task-status-hidden"
               }`}
             >
-              {isVisible ? "Visible" : "Hidden"}
+              {isVisible ? "Visible" : "Paused"}
             </span>
             {taskDirty ? <span className="focus-control-dirty-pill">Unsaved</span> : null}
             <span className="focus-control-collapse-icon" aria-hidden="true">
@@ -380,6 +384,7 @@ function FocusControlMetricEditor({
   metricsCount,
   onDirtyChange,
 }: FocusControlMetricEditorProps) {
+  const router = useRouter();
   const [draft, setDraft] = useState<MetricDraft>(() => metricToDraft(metric));
   const [baseline, setBaseline] = useState<MetricDraft>(() => metricToDraft(metric));
   const [saved, setSaved] = useState(false);
@@ -410,6 +415,7 @@ function FocusControlMetricEditor({
         setBaseline(draft);
         setSaved(true);
         setError(null);
+        router.refresh();
         window.setTimeout(() => setSaved(false), 1800);
       } catch (actionError) {
         setError(actionError instanceof Error ? actionError.message : "Could not save the metric.");

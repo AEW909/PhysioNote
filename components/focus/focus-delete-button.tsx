@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 type FocusDeleteButtonProps = {
   action: (formData: FormData) => void | Promise<void>;
@@ -17,7 +18,23 @@ export function FocusDeleteButton({
   label,
   disabled = false,
 }: FocusDeleteButtonProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  const handleConfirmDelete = () => {
+    startTransition(async () => {
+      const formData = new FormData();
+
+      for (const [key, value] of Object.entries(hiddenFields)) {
+        formData.set(key, value ?? "");
+      }
+
+      await action(formData);
+      setOpen(false);
+      router.refresh();
+    });
+  };
 
   return (
     <>
@@ -44,14 +61,9 @@ export function FocusDeleteButton({
               <button className="button button-secondary" onClick={() => setOpen(false)} type="button">
                 Cancel
               </button>
-              <form action={action}>
-                {Object.entries(hiddenFields).map(([key, value]) => (
-                  <input key={key} name={key} type="hidden" value={value ?? ""} />
-                ))}
-                <button className="button button-danger" type="submit">
-                  Confirm delete
-                </button>
-              </form>
+              <button className="button button-danger" disabled={pending} onClick={handleConfirmDelete} type="button">
+                {pending ? "Deleting..." : "Confirm delete"}
+              </button>
             </div>
           </div>
         </div>

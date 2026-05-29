@@ -158,7 +158,7 @@ export async function toggleFocusBoardTaskVisibilityAction(formData: FormData) {
   await admin
     .from("focus_board_tasks")
     .update({
-      is_active: nextVisible === "true",
+      is_visible: nextVisible === "true",
     })
     .eq("id", taskId)
     .eq("board_key", FOCUS_BOARD_KEY);

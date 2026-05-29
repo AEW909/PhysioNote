@@ -27,6 +27,7 @@ export type FocusBoardTask = {
   accentClass: string;
   sortOrder?: number;
   isActive?: boolean;
+  isVisible?: boolean;
   metrics: FocusBoardTaskMetric[];
 };
 

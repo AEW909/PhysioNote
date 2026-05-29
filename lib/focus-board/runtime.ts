@@ -33,6 +33,7 @@ type FocusBoardTaskRow = {
   accent_class: string;
   sort_order: number;
   is_active: boolean;
+  is_visible: boolean;
 };
 
 type FocusBoardTaskMetricRow = {
@@ -129,6 +130,7 @@ function mapTasks(taskRows: FocusBoardTaskRow[] | null, metricRows: FocusBoardTa
       accentClass: row.accent_class,
       sortOrder: row.sort_order,
       isActive: row.is_active,
+      isVisible: row.is_visible,
       metrics: (metricsByTask.get(row.id) ?? [])
         .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
     }))
@@ -137,7 +139,7 @@ function mapTasks(taskRows: FocusBoardTaskRow[] | null, metricRows: FocusBoardTa
   return {
     allTasks,
     tasks: allTasks
-      .filter((task) => task.isActive)
+      .filter((task) => task.isActive && task.isVisible)
       .map((task) => ({
         ...task,
         metrics: task.metrics.filter((metric) => metric.isActive),
@@ -177,7 +179,7 @@ export async function getFocusBoardRuntimeConfig(): Promise<FocusBoardRuntimeCon
       .maybeSingle<FocusBoardSettingsRow>(),
     admin
       .from("focus_board_tasks")
-      .select("id, board_key, task_key, icon, sticker_src, sticker_alt, title, description, accent_class, sort_order, is_active")
+      .select("id, board_key, task_key, icon, sticker_src, sticker_alt, title, description, accent_class, sort_order, is_active, is_visible")
       .eq("board_key", FOCUS_BOARD_KEY)
       .order("sort_order", { ascending: true }),
     admin
