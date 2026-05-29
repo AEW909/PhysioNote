@@ -93,13 +93,29 @@ Please write the content now, ready to use.`;
     });
 
     const data = (await response.json()) as {
-      error?: unknown;
+      error?:
+        | {
+            type?: string;
+            message?: string;
+          }
+        | string
+        | unknown;
       content?: Array<{ type: string; text?: string }>;
     };
 
     if (!response.ok) {
+      const detail =
+        typeof data.error === "string"
+          ? data.error
+          : data.error &&
+              typeof data.error === "object" &&
+              "message" in data.error &&
+              typeof data.error.message === "string"
+            ? data.error.message
+            : `Anthropic returned status ${response.status}.`;
+
       return NextResponse.json(
-        { error: "Anthropic API error.", detail: data.error ?? data },
+        { error: detail, detail: data.error ?? data },
         { status: 502 },
       );
     }

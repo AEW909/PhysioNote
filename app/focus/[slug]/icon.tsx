@@ -24,68 +24,32 @@ export default function Icon() {
             "radial-gradient(circle at 18% 18%, rgba(0,245,212,0.35), transparent 24%), radial-gradient(circle at 82% 18%, rgba(255,77,202,0.35), transparent 24%), radial-gradient(circle at 50% 84%, rgba(149,255,74,0.28), transparent 28%), linear-gradient(180deg, #04040c 0%, #090816 55%, #10051d 100%)",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            width: 360,
-            height: 360,
-            borderRadius: 9999,
-            border: "22px solid #00f5d4",
-            boxShadow: "0 0 40px rgba(0,245,212,0.45)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            width: 224,
-            height: 224,
-            borderRadius: 9999,
-            border: "18px solid #ff4dca",
-            boxShadow: "0 0 40px rgba(255,77,202,0.35)",
-          }}
-        />
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 170,
-            height: 170,
-            borderRadius: 9999,
-            background: "#fff7ff",
-            color: "#111111",
-            fontSize: 96,
-            fontWeight: 900,
-            boxShadow: "0 0 60px rgba(255,255,255,0.18)",
-          }}
+        <svg
+          viewBox="0 0 280 260"
+          width="390"
+          height="362"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          GO
-        </div>
-        <div
-          style={{
-            position: "absolute",
-            top: 88,
-            left: 74,
-            width: 54,
-            height: 54,
-            borderRadius: 9999,
-            background: "#ffd84d",
-            border: "10px solid #111111",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            right: 72,
-            bottom: 88,
-            width: 64,
-            height: 64,
-            borderRadius: 18,
-            background: "#95ff4a",
-            border: "10px solid #111111",
-            transform: "rotate(18deg)",
-          }}
-        />
+          <defs>
+            <linearGradient id="monsterIconGradient" x1="58" y1="49" x2="230" y2="205" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#FF4DCA" />
+              <stop offset="1" stopColor="#8E5DFF" />
+            </linearGradient>
+          </defs>
+          <path d="M56 73C56 36 88 10 126 14L154 17C196 22 226 57 226 100V150C226 191 193 224 152 224H128C88 224 56 192 56 152V73Z" fill="url(#monsterIconGradient)" stroke="#111111" strokeWidth="8" />
+          <circle cx="107" cy="106" r="18" fill="#FFF7FF" stroke="#111111" strokeWidth="8" />
+          <circle cx="176" cy="106" r="18" fill="#FFF7FF" stroke="#111111" strokeWidth="8" />
+          <circle cx="107" cy="106" r="7" fill="#111111" />
+          <circle cx="176" cy="106" r="7" fill="#111111" />
+          <path d="M109 145C125 159 157 159 173 145" stroke="#111111" strokeWidth="8" strokeLinecap="round" />
+          <path d="M92 21L104 53" stroke="#FFD84D" strokeWidth="10" strokeLinecap="round" />
+          <path d="M194 21L182 53" stroke="#FFD84D" strokeWidth="10" strokeLinecap="round" />
+          <path d="M140 0L140 36" stroke="#FFD84D" strokeWidth="10" strokeLinecap="round" />
+          <path d="M84 191L70 225" stroke="#111111" strokeWidth="8" strokeLinecap="round" />
+          <path d="M198 191L212 225" stroke="#111111" strokeWidth="8" strokeLinecap="round" />
+          <path d="M45 154L14 166L31 190" stroke="#00F5D4" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M238 152L266 171L248 191" stroke="#95FF4A" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </div>
     ),
     size,
