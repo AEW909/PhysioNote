@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getServerEnv } from "@/lib/env";
 
 const SYSTEM_PROMPT = `You are a specialist copywriter for Skin Revive Aesthetics, a clinical aesthetics practice in Lancaster run by Liona Harris - an HCPC-registered physiotherapist with 15 years clinical experience and 3 years in aesthetics. The practice is based at 3-1-5 Health Club, Mannin Way, Lancaster. The website is skinreviveaesthetics.com.
 
@@ -54,36 +53,41 @@ type FocusContentPayload = {
   topic?: string;
 };
 
-type OpenAIResponsesPayload = {
-  output_text?: string;
-  output?: Array<{
-    content?: Array<{
-      text?: string;
-    }>;
-  }>;
+type AnthropicErrorPayload = {
+  type?: string;
   error?: {
+    type?: string;
     message?: string;
   };
 };
 
-function extractOutputText(payload: OpenAIResponsesPayload) {
-  if (typeof payload.output_text === "string" && payload.output_text.trim()) {
-    return payload.output_text.trim();
-  }
+type AnthropicMessagePayload = AnthropicErrorPayload & {
+  content?: Array<{
+    type?: string;
+    text?: string;
+  }>;
+};
 
-  for (const item of payload.output ?? []) {
-    for (const contentItem of item.content ?? []) {
-      if (typeof contentItem.text === "string" && contentItem.text.trim()) {
-        return contentItem.text.trim();
-      }
-    }
-  }
+async function readAnthropicError(response: Response) {
+  const text = await response.text();
 
-  return null;
+  try {
+    const payload = JSON.parse(text) as AnthropicErrorPayload;
+    return payload.error?.message ?? payload.type ?? text;
+  } catch {
+    return text;
+  }
 }
 
 export async function POST(request: Request) {
-  const env = getServerEnv();
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: "ANTHROPIC_API_KEY is not configured." },
+      { status: 500 },
+    );
+  }
 
   const { channel, format, tone, topic } = (await request.json()) as FocusContentPayload;
 
@@ -99,22 +103,46 @@ Topic / brief: ${topic}
 Please write the content now, ready to use.`;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const model = "claude-sonnet-4-20250514";
+
+    const modelResponse = await fetch(`https://api.anthropic.com/v1/models/${model}`, {
+      method: "GET",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+    });
+
+    if (!modelResponse.ok) {
+      const detail = await readAnthropicError(modelResponse);
+
+      return NextResponse.json(
+        {
+          error: `Anthropic model lookup failed for ${model}.`,
+          detail,
+          note: "This usually means the API key's workspace cannot access that model, even though the route itself is wired correctly.",
+        },
+        { status: 502 },
+      );
+    }
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        instructions: SYSTEM_PROMPT,
-        max_output_tokens: 1000,
-        input: [
+        model,
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: [
           {
             role: "user",
             content: [
               {
-                type: "input_text",
+                type: "text",
                 text: userPrompt,
               },
             ],
@@ -123,18 +151,17 @@ Please write the content now, ready to use.`;
       }),
     });
 
-    const data = (await response.json()) as OpenAIResponsesPayload;
-
     if (!response.ok) {
-      const detail = data.error?.message ?? `OpenAI returned status ${response.status}.`;
+      const detail = await readAnthropicError(response);
 
       return NextResponse.json(
-        { error: detail, detail: data.error ?? data },
+        { error: detail || `Anthropic returned status ${response.status}.` },
         { status: 502 },
       );
     }
 
-    const text = extractOutputText(data);
+    const data = (await response.json()) as AnthropicMessagePayload;
+    const text = data.content?.find((block) => block.type === "text")?.text?.trim();
 
     if (!text) {
       return NextResponse.json({ error: "No content returned." }, { status: 502 });
