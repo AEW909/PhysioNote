@@ -1,16 +1,10 @@
 import { notFound } from "next/navigation";
 import {
-  addFocusBoardMetricAction,
   addFocusBoardTaskAction,
-  deleteFocusBoardMetricAction,
-  deleteFocusBoardTaskAction,
-  toggleFocusBoardTaskVisibilityAction,
-  updateFocusBoardMetricAction,
   updateFocusBoardSettingsAction,
-  updateFocusBoardTaskAction,
   updateFocusRewardTierAction,
 } from "@/app/focus-control/actions";
-import { FocusDeleteButton } from "@/components/focus/focus-delete-button";
+import { FocusControlExistingGoals } from "@/components/focus/focus-control-existing-goals";
 import { getFocusBoardRuntimeConfigByAdminSlug } from "@/lib/focus-board/runtime";
 
 type FocusControlPageProps = {
@@ -150,142 +144,10 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
           </div>
 
           <div className="focus-control-stack">
-            {runtime.allTasks.map((task) => (
-              <section className="focus-control-task-panel" key={task.id ?? task.key}>
-                <div className="focus-control-corner-action">
-                  <FocusDeleteButton
-                    action={deleteFocusBoardTaskAction}
-                    confirmMessage={`Delete "${task.title}" from future use? Existing historical points will be preserved.`}
-                    hiddenFields={{
-                      adminSlug: runtime.settings.adminSlug,
-                      taskId: task.id,
-                    }}
-                    label={`Delete ${task.title}`}
-                  />
-                </div>
-                <form action={updateFocusBoardTaskAction} className="focus-control-form">
-                  <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
-                  <input name="taskId" type="hidden" value={task.id} />
-                  <div className="focus-control-two-up">
-                    <label className="field">
-                      <span>Task title</span>
-                      <input defaultValue={task.title} name="title" />
-                    </label>
-                    <label className="field">
-                      <span>Badge text</span>
-                      <input defaultValue={task.icon} name="icon" />
-                    </label>
-                  </div>
-                  <label className="field">
-                    <span>Description</span>
-                    <textarea defaultValue={task.description} name="description" />
-                  </label>
-                  <div className="focus-control-two-up">
-                    <label className="field">
-                      <span>Sticker path</span>
-                      <input defaultValue={task.stickerSrc} name="stickerSrc" />
-                    </label>
-                    <label className="field">
-                      <span>Sticker alt</span>
-                      <input defaultValue={task.stickerAlt} name="stickerAlt" />
-                    </label>
-                  </div>
-                  <div className="focus-control-task-status-row">
-                    <span className={`focus-control-task-status ${task.isActive ? "focus-control-task-status-live" : "focus-control-task-status-hidden"}`}>
-                      {task.isActive ? "Visible on Liona's board" : "Hidden from Liona's board"}
-                    </span>
-                  </div>
-                  <button className="button button-secondary" type="submit">
-                    Save goal details
-                  </button>
-                </form>
-
-                <form action={toggleFocusBoardTaskVisibilityAction} className="focus-control-inline-action">
-                  <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
-                  <input name="taskId" type="hidden" value={task.id} />
-                  <input name="nextVisible" type="hidden" value={task.isActive ? "false" : "true"} />
-                  <button className="button button-secondary button-small" type="submit">
-                    {task.isActive ? "Hide goal for now" : "Show goal again"}
-                  </button>
-                </form>
-
-                <div className="focus-control-metric-stack">
-                  {task.metrics.map((metric) => (
-                    <form action={updateFocusBoardMetricAction} className="focus-control-metric-row" key={metric.id ?? metric.key}>
-                      <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
-                      <input name="metricId" type="hidden" value={metric.id} />
-                      <input name="taskId" type="hidden" value={task.id} />
-                      <label className="field">
-                        <span>Metric label</span>
-                        <input defaultValue={metric.label} name="label" />
-                      </label>
-                      <label className="field">
-                        <span>Target</span>
-                        <input defaultValue={metric.target} min={0} name="target" type="number" />
-                      </label>
-                      <label className="field">
-                        <span>Points</span>
-                        <input defaultValue={metric.points} name="points" type="number" />
-                      </label>
-                      <label className="field">
-                        <span>Kind</span>
-                        <select className="select-field" defaultValue={metric.kind} name="kind">
-                          <option value="count">Count</option>
-                          <option value="toggle">Toggle</option>
-                        </select>
-                      </label>
-                      <button className="button button-secondary button-small" type="submit">
-                        Save metric
-                      </button>
-                      <div className="focus-control-metric-delete">
-                        <FocusDeleteButton
-                          action={deleteFocusBoardMetricAction}
-                          confirmMessage={`Delete the "${metric.label}" metric from "${task.title}"? Existing historical points will be preserved.`}
-                          disabled={task.metrics.length <= 1}
-                          hiddenFields={{
-                            adminSlug: runtime.settings.adminSlug,
-                            taskId: task.id,
-                            metricId: metric.id,
-                          }}
-                          label={
-                            task.metrics.length <= 1
-                              ? "Delete whole challenge instead"
-                              : `Delete metric ${metric.label}`
-                          }
-                        />
-                      </div>
-                    </form>
-                  ))}
-
-                  <form action={addFocusBoardMetricAction} className="focus-control-metric-row focus-control-metric-row-new">
-                    <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
-                    <input name="taskId" type="hidden" value={task.id} />
-                    <label className="field">
-                      <span>New metric label</span>
-                      <input name="metricLabel" placeholder="Bonus review" />
-                    </label>
-                    <label className="field">
-                      <span>Target</span>
-                      <input defaultValue={0} min={0} name="target" type="number" />
-                    </label>
-                    <label className="field">
-                      <span>Points</span>
-                      <input defaultValue={5} name="points" type="number" />
-                    </label>
-                    <label className="field">
-                      <span>Kind</span>
-                      <select className="select-field" defaultValue="count" name="kind">
-                        <option value="count">Count</option>
-                        <option value="toggle">Toggle</option>
-                      </select>
-                    </label>
-                    <button className="button button-primary button-small" type="submit">
-                      Add metric
-                    </button>
-                  </form>
-                </div>
-              </section>
-            ))}
+            <FocusControlExistingGoals
+              adminSlug={runtime.settings.adminSlug}
+              tasks={runtime.allTasks}
+            />
           </div>
         </article>
 

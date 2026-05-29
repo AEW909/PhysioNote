@@ -1099,7 +1099,7 @@ a {
   gap: 18px;
   padding-top: 18px;
   padding-bottom: 56px;
-  width: min(100%, 1040px);
+  width: min(100%, 1160px);
   justify-self: center;
 }
 
@@ -1136,7 +1136,7 @@ a {
 .focus-control-two-up,
 .focus-control-three-up {
   display: grid;
-  gap: 16px;
+  gap: 18px;
 }
 
 .focus-control-grid {
@@ -1155,7 +1155,7 @@ a {
 .focus-control-form,
 .focus-control-metric-stack {
   display: grid;
-  gap: 16px;
+  gap: 18px;
 }
 
 .focus-control-card,
@@ -1184,6 +1184,23 @@ a {
   position: relative;
 }
 
+.focus-control-task-shell {
+  display: grid;
+}
+
+.focus-control-task-collapsible {
+  border-radius: 28px;
+  overflow: hidden;
+}
+
+.focus-control-task-collapsible summary {
+  list-style: none;
+}
+
+.focus-control-task-collapsible summary::-webkit-details-marker {
+  display: none;
+}
+
 .focus-control-links {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1208,31 +1225,9 @@ a {
   overflow-wrap: anywhere;
 }
 
-.focus-control-metric-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(160px, 0.7fr)) auto;
-  gap: 12px;
-  align-items: end;
-  padding: 14px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.focus-control-metric-row-new {
-  background:
-    radial-gradient(circle at top left, rgba(149, 255, 74, 0.12), transparent 28%),
-    rgba(255, 255, 255, 0.05);
-}
-
 .focus-control-inline-action {
   display: flex;
   justify-content: flex-end;
-}
-
-.focus-control-task-status-row {
-  display: flex;
-  justify-content: flex-start;
 }
 
 .focus-control-task-status {
@@ -1257,6 +1252,20 @@ a {
   color: #ffd84d;
 }
 
+.focus-control-dirty-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 77, 202, 0.16);
+  color: #ff9ce3;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .focus-control-page .split-header {
   align-items: center;
 }
@@ -1271,6 +1280,67 @@ a {
   padding: 20px;
 }
 
+.focus-control-task-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  cursor: pointer;
+  padding: 20px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(0, 245, 212, 0.08), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(255, 77, 202, 0.08), transparent 28%),
+    rgba(10, 9, 20, 0.9);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 16px 38px rgba(0, 0, 0, 0.28);
+}
+
+.focus-control-task-summary-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.focus-control-task-summary-copy h3 {
+  margin: 0;
+  font-size: 1.18rem;
+}
+
+.focus-control-task-summary-copy p:last-child {
+  margin: 0;
+  color: rgba(244, 240, 255, 0.7);
+}
+
+.focus-control-task-summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.focus-control-collapse-icon {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.focus-control-task-panel-rich {
+  margin-top: 12px;
+  padding-top: 48px !important;
+  gap: 18px;
+}
+
 .focus-control-corner-action {
   position: absolute;
   top: 12px;
@@ -1279,8 +1349,10 @@ a {
 }
 
 .focus-control-metric-delete {
-  display: flex;
-  justify-content: flex-end;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
 }
 
 .focus-delete-icon {
@@ -1315,7 +1387,7 @@ a {
 
 .focus-control-page .button-secondary {
   border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(12, 12, 16, 0.92);
   color: #fff;
 }
 
@@ -1327,6 +1399,77 @@ a {
 .focus-control-page .button-danger {
   background: linear-gradient(135deg, #ff6b57 0%, #ff1aa8 100%);
   border-color: transparent;
+}
+
+.focus-control-task-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.focus-control-save-button {
+  min-width: 170px;
+}
+
+.focus-control-save-button-active {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 0 24px rgba(255, 26, 168, 0.24),
+    0 0 34px rgba(0, 232, 255, 0.18);
+}
+
+.focus-control-saved-tag {
+  color: #59f4d6;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.focus-control-error-tag {
+  color: #ffb0d6;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.focus-control-inline-action-wide {
+  justify-content: flex-start;
+}
+
+.focus-control-metric-card {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.focus-control-metric-card-new {
+  background:
+    radial-gradient(circle at top left, rgba(149, 255, 74, 0.12), transparent 28%),
+    rgba(255, 255, 255, 0.05);
+}
+
+.focus-control-metric-card-head {
+  display: grid;
+  gap: 6px;
+  padding-right: 40px;
+}
+
+.focus-control-metric-card-head h4 {
+  margin: 0;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.focus-control-metric-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+  align-items: start;
 }
 
 .focus-public-page-neon {
@@ -2628,12 +2771,20 @@ a {
   .focus-control-two-up,
   .focus-control-three-up,
   .focus-control-links,
-  .focus-control-metric-row {
+  .focus-control-metric-fields {
     grid-template-columns: 1fr;
   }
 
   .focus-view-chip {
     width: 100%;
+  }
+
+  .focus-control-task-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .focus-control-task-summary-meta {
+    justify-content: flex-start;
   }
 
   .focus-hero-stickers {
