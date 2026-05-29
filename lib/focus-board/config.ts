@@ -13,6 +13,7 @@ export type FocusBoardTaskMetric = {
   points: number;
   kind: FocusMetricKind;
   sortOrder?: number;
+  isActive?: boolean;
 };
 
 export type FocusBoardTask = {
@@ -25,6 +26,7 @@ export type FocusBoardTask = {
   description: string;
   accentClass: string;
   sortOrder?: number;
+  isActive?: boolean;
   metrics: FocusBoardTaskMetric[];
 };
 
@@ -160,4 +162,3 @@ export function normaliseFocusKey(value: string) {
 export function getAccentClassForIndex(index: number) {
   return FOCUS_TASK_ACCENT_CLASSES[index % FOCUS_TASK_ACCENT_CLASSES.length];
 }
-

@@ -32,6 +32,7 @@ type FocusBoardTaskRow = {
   description: string;
   accent_class: string;
   sort_order: number;
+  is_active: boolean;
 };
 
 type FocusBoardTaskMetricRow = {
@@ -43,6 +44,7 @@ type FocusBoardTaskMetricRow = {
   points: number;
   kind: FocusBoardTaskMetric["kind"];
   sort_order: number;
+  is_active: boolean;
 };
 
 type FocusRewardTierRow = {
@@ -61,6 +63,7 @@ type FocusRewardTierRow = {
 export type FocusBoardRuntimeConfig = {
   settings: FocusBoardSettings;
   tasks: FocusBoardTask[];
+  allTasks: FocusBoardTask[];
   rewards: FocusRewardTier[];
 };
 
@@ -68,6 +71,7 @@ function buildFallbackConfig(): FocusBoardRuntimeConfig {
   return {
     settings: DEFAULT_FOCUS_BOARD_SETTINGS,
     tasks: DEFAULT_FOCUS_BOARD_TASKS,
+    allTasks: DEFAULT_FOCUS_BOARD_TASKS,
     rewards: DEFAULT_FOCUS_REWARD_TIERS,
   };
 }
@@ -89,7 +93,10 @@ function mapSettings(row?: FocusBoardSettingsRow | null): FocusBoardSettings {
 
 function mapTasks(taskRows: FocusBoardTaskRow[] | null, metricRows: FocusBoardTaskMetricRow[] | null) {
   if (!taskRows?.length) {
-    return DEFAULT_FOCUS_BOARD_TASKS;
+    return {
+      tasks: DEFAULT_FOCUS_BOARD_TASKS,
+      allTasks: DEFAULT_FOCUS_BOARD_TASKS,
+    };
   }
 
   const metricsByTask = new Map<string, FocusBoardTaskMetric[]>();
@@ -104,11 +111,12 @@ function mapTasks(taskRows: FocusBoardTaskRow[] | null, metricRows: FocusBoardTa
       points: row.points,
       kind: row.kind,
       sortOrder: row.sort_order,
+      isActive: row.is_active,
     });
     metricsByTask.set(row.task_id, metrics);
   }
 
-  return [...taskRows]
+  const allTasks = [...taskRows]
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((row) => ({
       id: row.id,
@@ -120,10 +128,22 @@ function mapTasks(taskRows: FocusBoardTaskRow[] | null, metricRows: FocusBoardTa
       description: row.description,
       accentClass: row.accent_class,
       sortOrder: row.sort_order,
+      isActive: row.is_active,
       metrics: (metricsByTask.get(row.id) ?? [])
         .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
     }))
     .filter((task) => task.metrics.length > 0);
+
+  return {
+    allTasks,
+    tasks: allTasks
+      .filter((task) => task.isActive)
+      .map((task) => ({
+        ...task,
+        metrics: task.metrics.filter((metric) => metric.isActive),
+      }))
+      .filter((task) => task.metrics.length > 0),
+  };
 }
 
 function mapRewards(rows?: FocusRewardTierRow[] | null) {
@@ -157,12 +177,12 @@ export async function getFocusBoardRuntimeConfig(): Promise<FocusBoardRuntimeCon
       .maybeSingle<FocusBoardSettingsRow>(),
     admin
       .from("focus_board_tasks")
-      .select("id, board_key, task_key, icon, sticker_src, sticker_alt, title, description, accent_class, sort_order")
+      .select("id, board_key, task_key, icon, sticker_src, sticker_alt, title, description, accent_class, sort_order, is_active")
       .eq("board_key", FOCUS_BOARD_KEY)
       .order("sort_order", { ascending: true }),
     admin
       .from("focus_board_task_metrics")
-      .select("id, task_id, metric_key, label, target, points, kind, sort_order")
+      .select("id, task_id, metric_key, label, target, points, kind, sort_order, is_active")
       .order("sort_order", { ascending: true }),
     admin
       .from("focus_board_reward_tiers")
@@ -178,7 +198,7 @@ export async function getFocusBoardRuntimeConfig(): Promise<FocusBoardRuntimeCon
   }
 
   const settings = mapSettings((settingsResult.data as FocusBoardSettingsRow | null | undefined) ?? null);
-  const tasks = mapTasks(
+  const taskConfig = mapTasks(
     (tasksResult.data as FocusBoardTaskRow[] | null | undefined) ?? null,
     (metricsResult.data as FocusBoardTaskMetricRow[] | null | undefined) ?? null,
   );
@@ -186,7 +206,8 @@ export async function getFocusBoardRuntimeConfig(): Promise<FocusBoardRuntimeCon
 
   return {
     settings,
-    tasks,
+    tasks: taskConfig.tasks,
+    allTasks: taskConfig.allTasks,
     rewards,
   };
 }

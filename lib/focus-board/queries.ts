@@ -131,11 +131,13 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
   const counts = new Map<string, number>();
   const monthPointMap = new Map<string, number>();
   const selectedTaskPointMap = new Map<string, number>();
+  const weekPointMap = new Map<string, number>();
 
   events.forEach((event) => {
     const key = `${event.week_start}:${event.task_key}:${event.metric_key}`;
     counts.set(key, (counts.get(key) ?? 0) + 1);
     monthPointMap.set(event.month_key, (monthPointMap.get(event.month_key) ?? 0) + event.points);
+    weekPointMap.set(event.week_start, (weekPointMap.get(event.week_start) ?? 0) + event.points);
 
     if (event.month_key === selectedMonthKey) {
       selectedTaskPointMap.set(event.task_key, (selectedTaskPointMap.get(event.task_key) ?? 0) + event.points);
@@ -143,11 +145,9 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
   });
 
   const weeks = selectedWeekKeys.map((weekKey) => {
-    let weekPoints = 0;
-    const tasks = runtime.tasks.map((task) => {
+    const activeTasks = runtime.tasks.map((task) => {
       const metrics = task.metrics.map((metric) => {
         const count = counts.get(`${weekKey}:${task.key}:${metric.key}`) ?? 0;
-        weekPoints += count * metric.points;
         return {
           ...metric,
           count,
@@ -159,6 +159,29 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
         metrics,
       };
     });
+
+    const retiredTasks = runtime.allTasks
+      .filter((task) => !task.isActive)
+      .map((task) => {
+        const metrics = task.metrics
+          .map((metric) => {
+            const count = counts.get(`${weekKey}:${task.key}:${metric.key}`) ?? 0;
+            return {
+              ...metric,
+              count,
+            };
+          })
+          .filter((metric) => metric.count > 0);
+
+        return {
+          ...task,
+          metrics,
+        };
+      })
+      .filter((task) => task.metrics.length > 0);
+
+    const tasks = [...activeTasks, ...retiredTasks];
+    const weekPoints = weekPointMap.get(weekKey) ?? 0;
 
     return {
       weekKey,
@@ -197,6 +220,15 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
     points: selectedTaskPointMap.get(task.key) ?? 0,
   }));
 
+  const retiredBreakdown = runtime.allTasks
+    .filter((task) => !task.isActive && (selectedTaskPointMap.get(task.key) ?? 0) > 0)
+    .map((task) => ({
+      key: task.key,
+      title: `${task.title} (retired)`,
+      accentClass: task.accentClass,
+      points: selectedTaskPointMap.get(task.key) ?? 0,
+    }));
+
   const monthHistory = buildMonthHistory(currentMonthStart, monthPointMap);
 
   return {
@@ -223,7 +255,7 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
       previousMonthKey,
       nextMonthKey,
     },
-    monthlyBreakdown,
+    monthlyBreakdown: [...monthlyBreakdown, ...retiredBreakdown].filter((item) => item.points > 0 || runtime.tasks.some((task) => task.key === item.key)),
     monthHistory,
   };
 }

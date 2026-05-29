@@ -9,6 +9,7 @@ import {
   updateFocusBoardTaskAction,
   updateFocusRewardTierAction,
 } from "@/app/focus-control/actions";
+import { FocusDeleteButton } from "@/components/focus/focus-delete-button";
 import { getFocusBoardRuntimeConfigByAdminSlug } from "@/lib/focus-board/runtime";
 
 type FocusControlPageProps = {
@@ -150,6 +151,17 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
           <div className="focus-control-stack">
             {runtime.tasks.map((task) => (
               <section className="focus-control-task-panel" key={task.id ?? task.key}>
+                <div className="focus-control-corner-action">
+                  <FocusDeleteButton
+                    action={deleteFocusBoardTaskAction}
+                    confirmMessage={`Delete "${task.title}" from future use? Existing historical points will be preserved.`}
+                    hiddenFields={{
+                      adminSlug: runtime.settings.adminSlug,
+                      taskId: task.id,
+                    }}
+                    label={`Delete ${task.title}`}
+                  />
+                </div>
                 <form action={updateFocusBoardTaskAction} className="focus-control-form">
                   <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
                   <input name="taskId" type="hidden" value={task.id} />
@@ -182,14 +194,6 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
                   </button>
                 </form>
 
-                <form action={deleteFocusBoardTaskAction} className="focus-control-inline-action">
-                  <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
-                  <input name="taskId" type="hidden" value={task.id} />
-                  <button className="button button-danger button-small" type="submit">
-                    Delete challenge
-                  </button>
-                </form>
-
                 <div className="focus-control-metric-stack">
                   {task.metrics.map((metric) => (
                     <form action={updateFocusBoardMetricAction} className="focus-control-metric-row" key={metric.id ?? metric.key}>
@@ -218,21 +222,23 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
                       <button className="button button-secondary button-small" type="submit">
                         Save metric
                       </button>
-                    </form>
-                  ))}
-
-                  {task.metrics.map((metric) => (
-                    <form action={deleteFocusBoardMetricAction} className="focus-control-inline-action" key={`${metric.id ?? metric.key}-delete`}>
-                      <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
-                      <input name="taskId" type="hidden" value={task.id} />
-                      <input name="metricId" type="hidden" value={metric.id} />
-                      <button
-                        className="button button-danger button-small"
-                        disabled={task.metrics.length <= 1}
-                        type="submit"
-                      >
-                        {task.metrics.length <= 1 ? "Delete whole challenge instead" : `Delete metric: ${metric.label}`}
-                      </button>
+                      <div className="focus-control-metric-delete">
+                        <FocusDeleteButton
+                          action={deleteFocusBoardMetricAction}
+                          confirmMessage={`Delete the "${metric.label}" metric from "${task.title}"? Existing historical points will be preserved.`}
+                          disabled={task.metrics.length <= 1}
+                          hiddenFields={{
+                            adminSlug: runtime.settings.adminSlug,
+                            taskId: task.id,
+                            metricId: metric.id,
+                          }}
+                          label={
+                            task.metrics.length <= 1
+                              ? "Delete whole challenge instead"
+                              : `Delete metric ${metric.label}`
+                          }
+                        />
+                      </div>
                     </form>
                   ))}
 

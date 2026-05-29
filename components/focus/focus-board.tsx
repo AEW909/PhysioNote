@@ -306,10 +306,10 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                   </div>
 
                   <div className="focus-task-sticker-copy">
-                    <div className="focus-task-chip">{task.icon}</div>
-                    <h3>{task.title}</h3>
-                    <p>{task.description}</p>
-                  </div>
+                  <div className="focus-task-chip">{task.icon}</div>
+                  <h3>{task.title}</h3>
+                  {!task.isActive ? <p className="focus-retired-tag">Retired challenge</p> : null}
+                </div>
 
                   <details className="focus-help focus-help-sticker">
                     <summary aria-label={`About ${task.title}`}>?</summary>
@@ -349,7 +349,7 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                             <input name="direction" type="hidden" value="remove" />
                             <button
                               className="focus-icon-button"
-                              disabled={pending || metric.count === 0 || !board.canEditSelectedWeek}
+                              disabled={pending || metric.count === 0 || !board.canEditSelectedWeek || !task.isActive || !metric.isActive}
                               type="submit"
                             >
                               -
@@ -369,7 +369,7 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                             <input name="direction" type="hidden" value="add" />
                             <button
                               className="focus-icon-button focus-icon-button-plus"
-                              disabled={pending || !board.canEditSelectedWeek}
+                              disabled={pending || !board.canEditSelectedWeek || !task.isActive || !metric.isActive}
                               type="submit"
                             >
                               +

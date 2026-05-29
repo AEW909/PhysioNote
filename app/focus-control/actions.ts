@@ -159,9 +159,13 @@ export async function deleteFocusBoardTaskAction(formData: FormData) {
 
   await admin
     .from("focus_board_tasks")
-    .delete()
+    .update({
+      is_active: false,
+    })
     .eq("id", taskId)
     .eq("board_key", FOCUS_BOARD_KEY);
+
+  await admin.from("focus_board_task_metrics").update({ is_active: false }).eq("task_id", taskId);
 
   revalidateFocusPaths(runtime.settings.boardSlug, runtime.settings.adminSlug);
   redirect(`/focus-control/${runtime.settings.adminSlug}`);
@@ -243,7 +247,7 @@ export async function deleteFocusBoardMetricAction(formData: FormData) {
     throw new Error("Delete the whole challenge instead of removing its final metric.");
   }
 
-  await admin.from("focus_board_task_metrics").delete().eq("id", metricId);
+  await admin.from("focus_board_task_metrics").update({ is_active: false }).eq("id", metricId);
 
   revalidateFocusPaths(runtime.settings.boardSlug, runtime.settings.adminSlug);
   redirect(`/focus-control/${runtime.settings.adminSlug}`);
