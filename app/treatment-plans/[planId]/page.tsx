@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { PlanSessionList } from "@/components/treatment-plans/treatment-plan-list";
 import { TreatmentPlanArchiveToggleForm } from "@/components/treatment-plans/treatment-plan-archive-toggle-form";
+import { TreatmentPlanDeleteForm } from "@/components/treatment-plans/treatment-plan-delete-form";
 import { getCurrentProfile, requireRole } from "@/lib/auth/session";
 import { getPatient } from "@/lib/patients/queries";
 import { getTreatmentPlan } from "@/lib/treatment-plans/queries";
@@ -60,9 +61,17 @@ export default async function TreatmentPlanDetailPage({ params }: TreatmentPlanD
             </Link>
           ) : null}
         </div>
-        {profile.role === "owner" || profile.role === "admin" ? (
-          <TreatmentPlanArchiveToggleForm isArchived={plan.is_archived} patientId={patient.id} planId={plan.id} />
-        ) : null}
+        <div className="workspace-actions">
+          {profile.role === "owner" || profile.role === "admin" ? (
+            <TreatmentPlanArchiveToggleForm isArchived={plan.is_archived} patientId={patient.id} planId={plan.id} />
+          ) : null}
+          {profile.role === "owner" &&
+          plan.is_archived &&
+          plan.sessions.length === 0 &&
+          plan.archived_sessions.length === 0 ? (
+            <TreatmentPlanDeleteForm patientId={patient.id} planId={plan.id} />
+          ) : null}
+        </div>
       </div>
 
       <div className="detail-grid">
@@ -137,6 +146,14 @@ export default async function TreatmentPlanDetailPage({ params }: TreatmentPlanD
             />
           </div>
         </details>
+      ) : null}
+      {profile.role === "owner" ? (
+        <section className="card stack">
+          <h2>Record management</h2>
+          <p className="lede">
+            Archived sessions can be deleted permanently from their note page. Treatment plans can only be deleted once they are archived and completely empty.
+          </p>
+        </section>
       ) : null}
     </AppShell>
   );

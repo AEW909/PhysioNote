@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireUser } from "@/lib/auth/session";
+import { getCurrentProfile, requireRole, requireUser } from "@/lib/auth/session";
 import { insertAuditLog } from "@/lib/audit/insert-audit-log";
 import { generateTreatmentPlanSummaries } from "@/lib/ai/treatment-plan-summaries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -203,6 +203,77 @@ export async function restoreTreatmentPlanAction(formData: FormData) {
     actorProfileId: user.id,
     beforeState: { is_archived: plan.is_archived },
     afterState: { is_archived: false },
+    entityId: planId,
+    entityType: "treatment_plan",
+  });
+
+  redirect(`/patients/${patientId}`);
+}
+
+export async function deleteTreatmentPlanAction(formData: FormData) {
+  await requireRole(["owner"]);
+  const user = await requireUser();
+  const profile = await getCurrentProfile();
+  const planId = getValue(formData, "planId");
+  const patientId = getValue(formData, "patientId");
+
+  if (!planId || !patientId) {
+    throw new Error("Treatment plan ID or patient ID is missing.");
+  }
+
+  if (!profile || profile.role !== "owner") {
+    throw new Error("Only owners can permanently delete treatment plans.");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: plan, error: planError } = await supabase
+    .from("treatment_plans")
+    .select("id, title, status, is_archived")
+    .eq("id", planId)
+    .single();
+
+  if (planError || !plan) {
+    throw new Error(planError?.message ?? "Failed to load treatment plan before delete.");
+  }
+
+  if (!plan.is_archived) {
+    throw new Error("Archive the treatment plan before deleting it permanently.");
+  }
+
+  const { count: linkedSessionCount, error: sessionCountError } = await supabase
+    .from("appointments")
+    .select("id", { count: "exact", head: true })
+    .eq("treatment_plan_id", planId);
+
+  if (sessionCountError) {
+    throw new Error(sessionCountError.message);
+  }
+
+  if ((linkedSessionCount ?? 0) > 0) {
+    throw new Error("Only empty archived treatment plans can be deleted permanently.");
+  }
+
+  const { error: deleteError } = await supabase
+    .from("treatment_plans")
+    .delete()
+    .eq("id", planId);
+
+  if (deleteError) {
+    throw new Error(deleteError.message);
+  }
+
+  await insertAuditLog({
+    action: "delete_treatment_plan",
+    actorProfileId: user.id,
+    beforeState: {
+      title: plan.title,
+      status: plan.status,
+      is_archived: plan.is_archived,
+      linked_session_count: linkedSessionCount ?? 0,
+    },
+    afterState: {
+      deleted: true,
+    },
     entityId: planId,
     entityType: "treatment_plan",
   });

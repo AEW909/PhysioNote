@@ -3,6 +3,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { FollowUpAiSupport } from "@/components/notes/follow-up-ai-support";
 import { NoteView } from "@/components/notes/note-view";
 import { SessionArchiveToggleForm } from "@/components/sessions/session-archive-toggle-form";
+import { SessionDeleteForm } from "@/components/sessions/session-delete-form";
 import { getAppointment } from "@/lib/appointments/queries";
 import { getCurrentProfile, requireRole } from "@/lib/auth/session";
 import { getClinicalNote } from "@/lib/notes/queries";
@@ -52,13 +53,18 @@ export default async function NoteDetailPage({ params }: NoteDetailPageProps) {
             </Link>
           ) : null}
         </div>
-        {appointment && treatmentPlan && (profile.role === "owner" || profile.role === "admin") ? (
-          <SessionArchiveToggleForm
-            isArchived={appointment.is_archived}
-            sessionId={appointment.id}
-            treatmentPlanId={treatmentPlan.id}
-          />
-        ) : null}
+        <div className="workspace-actions">
+          {appointment && treatmentPlan && (profile.role === "owner" || profile.role === "admin") ? (
+            <SessionArchiveToggleForm
+              isArchived={appointment.is_archived}
+              sessionId={appointment.id}
+              treatmentPlanId={treatmentPlan.id}
+            />
+          ) : null}
+          {appointment && treatmentPlan && profile.role === "owner" && appointment.is_archived ? (
+            <SessionDeleteForm sessionId={appointment.id} treatmentPlanId={treatmentPlan.id} />
+          ) : null}
+        </div>
       </div>
 
       <div className="detail-grid">
