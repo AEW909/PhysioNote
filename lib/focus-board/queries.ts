@@ -145,7 +145,7 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
   });
 
   const weeks = selectedWeekKeys.map((weekKey) => {
-    const activeTasks = runtime.tasks.map((task) => {
+    const tasks = runtime.tasks.map((task) => {
       const metrics = task.metrics.map((metric) => {
         const count = counts.get(`${weekKey}:${task.key}:${metric.key}`) ?? 0;
         return {
@@ -160,27 +160,6 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
       };
     });
 
-    const retiredTasks = runtime.allTasks
-      .filter((task) => !task.isActive)
-      .map((task) => {
-        const metrics = task.metrics
-          .map((metric) => {
-            const count = counts.get(`${weekKey}:${task.key}:${metric.key}`) ?? 0;
-            return {
-              ...metric,
-              count,
-            };
-          })
-          .filter((metric) => metric.count > 0);
-
-        return {
-          ...task,
-          metrics,
-        };
-      })
-      .filter((task) => task.metrics.length > 0);
-
-    const tasks = [...activeTasks, ...retiredTasks];
     const weekPoints = weekPointMap.get(weekKey) ?? 0;
 
     return {
@@ -220,15 +199,6 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
     points: selectedTaskPointMap.get(task.key) ?? 0,
   }));
 
-  const retiredBreakdown = runtime.allTasks
-    .filter((task) => !task.isActive && (selectedTaskPointMap.get(task.key) ?? 0) > 0)
-    .map((task) => ({
-      key: task.key,
-      title: `${task.title} (retired)`,
-      accentClass: task.accentClass,
-      points: selectedTaskPointMap.get(task.key) ?? 0,
-    }));
-
   const monthHistory = buildMonthHistory(currentMonthStart, monthPointMap);
 
   return {
@@ -255,7 +225,7 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
       previousMonthKey,
       nextMonthKey,
     },
-    monthlyBreakdown: [...monthlyBreakdown, ...retiredBreakdown].filter((item) => item.points > 0 || runtime.tasks.some((task) => task.key === item.key)),
+    monthlyBreakdown: monthlyBreakdown.filter((item) => item.points > 0 || runtime.tasks.some((task) => task.key === item.key)),
     monthHistory,
   };
 }
