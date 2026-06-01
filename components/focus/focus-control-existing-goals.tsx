@@ -157,7 +157,7 @@ function FocusControlTaskEditor({ adminSlug, task, onDirtyChange }: FocusControl
   const [taskSaved, setTaskSaved] = useState(false);
   const [taskError, setTaskError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [isVisible, setIsVisible] = useState(Boolean(task.isActive));
+  const [isVisible, setIsVisible] = useState(task.isActive !== false && task.isVisible !== false);
   const [isPendingTask, startTaskTransition] = useTransition();
 
   const taskDirty = !draftsMatch(taskDraft, taskBaseline);

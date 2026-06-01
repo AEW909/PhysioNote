@@ -139,10 +139,10 @@ function mapTasks(taskRows: FocusBoardTaskRow[] | null, metricRows: FocusBoardTa
   return {
     allTasks,
     tasks: allTasks
-      .filter((task) => task.isActive && task.isVisible)
+      .filter((task) => task.isActive !== false && task.isVisible !== false)
       .map((task) => ({
         ...task,
-        metrics: task.metrics.filter((metric) => metric.isActive),
+        metrics: task.metrics.filter((metric) => metric.isActive !== false),
       }))
       .filter((task) => task.metrics.length > 0),
   };
