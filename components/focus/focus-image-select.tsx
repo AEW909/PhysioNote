@@ -6,17 +6,20 @@ type FocusImageSelectProps = {
   assets: FocusAssetOption[];
   label: string;
   name?: string;
+  fallbackName?: string;
   value: string;
   onChange?: (value: string) => void;
 };
 
-export function FocusImageSelect({ assets, label, name, value, onChange }: FocusImageSelectProps) {
+export function FocusImageSelect({ assets, label, name, fallbackName, value, onChange }: FocusImageSelectProps) {
   const hasCurrentValue = assets.some((asset) => asset.value === value);
+  const selectedAsset = assets.find((asset) => asset.value === value);
   const selectValueProps = onChange ? { value } : { defaultValue: value };
 
   return (
     <label className="field focus-image-select-field">
       <span>{label}</span>
+      {fallbackName ? <input name={fallbackName} type="hidden" value={selectedAsset?.fallbackValue ?? ""} /> : null}
       <select
         className="select-field"
         name={name}

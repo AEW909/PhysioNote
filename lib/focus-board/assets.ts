@@ -9,10 +9,36 @@ const PUBLIC_FOCUS_DIR = path.join(process.cwd(), "public", "focus");
 const IMAGE_EXTENSIONS = new Set([".gif", ".jpg", ".jpeg", ".png", ".svg", ".webp"]);
 
 export type FocusAssetOption = {
+  fallbackValue?: string;
   label: string;
   value: string;
   source: "bundled" | "uploaded";
 };
+
+export function getBundledFocusFallback(src: string | null | undefined) {
+  if (!src) {
+    return null;
+  }
+
+  if (src.startsWith("/focus/")) {
+    return src;
+  }
+
+  try {
+    const url = new URL(src);
+    const marker = `/${FOCUS_ASSET_BUCKET}/${FOCUS_ASSET_FOLDER}/`;
+    const markerIndex = url.pathname.indexOf(marker);
+
+    if (markerIndex === -1) {
+      return null;
+    }
+
+    const filename = decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
+    return filename ? `/focus/${filename}` : null;
+  } catch {
+    return null;
+  }
+}
 
 function formatAssetLabel(filename: string) {
   return filename
@@ -56,6 +82,7 @@ async function listUploadedFocusAssets(): Promise<FocusAssetOption[]> {
       const { data: publicUrl } = admin.storage.from(FOCUS_ASSET_BUCKET).getPublicUrl(filePath);
 
       return {
+        fallbackValue: `/focus/${item.name}`,
         label: formatAssetLabel(item.name),
         value: publicUrl.publicUrl,
         source: "uploaded" as const,
@@ -69,5 +96,8 @@ export async function getFocusAssetOptions() {
     listUploadedFocusAssets(),
   ]);
 
-  return [...bundled, ...uploaded];
+  const uploadedFallbacks = new Set(uploaded.map((asset) => asset.fallbackValue).filter(Boolean));
+  const bundledWithoutUploadedCopy = bundled.filter((asset) => !uploadedFallbacks.has(asset.value));
+
+  return [...uploaded, ...bundledWithoutUploadedCopy];
 }

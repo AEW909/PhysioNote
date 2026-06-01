@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { updateFocusBoardAction, type UpdateFocusBoardState } from "@/app/focus/actions";
+import { FocusImageWithFallback } from "@/components/focus/focus-image-with-fallback";
 import type { FocusBoardData } from "@/lib/focus-board/queries";
 
 const initialState: UpdateFocusBoardState = {};
@@ -291,9 +292,14 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                     currentWeek.hitTarget ? "focus-reward-bubble-art-unlocked" : "focus-reward-bubble-art-locked"
                   }`}
                 >
-                  <img
+                  <FocusImageWithFallback
                     alt={weeklyPrizeTier.stickerAlt}
                     className="focus-reward-bubble-photo"
+                    fallbackSrc={
+                      currentWeek.hitTarget
+                        ? weeklyPrizeTier.unlockedStickerFallbackSrc
+                        : weeklyPrizeTier.lockedStickerFallbackSrc
+                    }
                     src={weeklyPrizeImageSrc}
                   />
                 </div>
@@ -310,7 +316,12 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
               <article className={`focus-task-sticker ${task.accentClass}`} key={task.key}>
                 <div className="focus-task-sticker-top">
                   <div className="focus-task-sticker-media">
-                    <img alt={task.stickerAlt} className="focus-task-sticker-image" src={task.stickerSrc} />
+                    <FocusImageWithFallback
+                      alt={task.stickerAlt}
+                      className="focus-task-sticker-image"
+                      fallbackSrc={task.stickerFallbackSrc}
+                      src={task.stickerSrc}
+                    />
                   </div>
 
                   <div className="focus-task-sticker-copy">
@@ -547,9 +558,10 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                 >
                   <div className="focus-month-tier-sticker-wrap">
                     <div className={`focus-liona-reward-art focus-liona-reward-art-${index + 1}`}>
-                      <img
+                      <FocusImageWithFallback
                         alt={tier.stickerAlt}
                         className="focus-liona-reward-photo"
+                        fallbackSrc={unlocked ? tier.unlockedStickerFallbackSrc : tier.lockedStickerFallbackSrc}
                         src={unlocked ? tier.unlockedStickerSrc : tier.lockedStickerSrc}
                       />
                     </div>

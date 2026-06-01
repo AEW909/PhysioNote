@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getBundledFocusFallback } from "@/lib/focus-board/assets";
 import {
   DEFAULT_FOCUS_BOARD_SETTINGS,
   DEFAULT_FOCUS_BOARD_TASKS,
@@ -124,6 +125,7 @@ function mapTasks(taskRows: FocusBoardTaskRow[] | null, metricRows: FocusBoardTa
       key: row.task_key,
       icon: row.icon,
       stickerSrc: row.sticker_src,
+      stickerFallbackSrc: getBundledFocusFallback(row.sticker_src),
       stickerAlt: row.sticker_alt,
       title: row.title,
       description: row.description,
@@ -161,7 +163,9 @@ function mapRewards(rows?: FocusRewardTierRow[] | null) {
       minPoints: row.min_points,
       minWeeksHit: row.min_weeks_hit,
       lockedStickerSrc: row.locked_sticker_src,
+      lockedStickerFallbackSrc: getBundledFocusFallback(row.locked_sticker_src),
       unlockedStickerSrc: row.unlocked_sticker_src,
+      unlockedStickerFallbackSrc: getBundledFocusFallback(row.unlocked_sticker_src),
       stickerAlt: row.sticker_alt,
       description: row.description,
       sortOrder: row.sort_order,

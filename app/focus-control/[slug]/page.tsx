@@ -58,6 +58,8 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
     notFound();
   }
 
+  const defaultChallengeSticker = assets.find((asset) => asset.fallbackValue === "/focus/mascot-rainbow.svg")?.value ?? "/focus/mascot-rainbow.svg";
+
   return (
     <main className="shell focus-public-page focus-public-page-neon focus-board-shell-neon focus-control-page">
       <FocusPullToRefresh label="Release to refresh controls" />
@@ -156,7 +158,7 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
                 assets={assets}
                 label="Sticker image"
                 name="stickerSrc"
-                value="/focus/mascot-rainbow.svg"
+                value={defaultChallengeSticker}
               />
               <label className="field">
                 <span>Sticker alt (optional)</span>
