@@ -155,13 +155,33 @@ export async function toggleFocusBoardTaskVisibilityAction(formData: FormData) {
     throw new Error("Task id missing.");
   }
 
-  await admin
+  const shouldShow = nextVisible === "true";
+  const taskUpdate = shouldShow
+    ? {
+        is_active: true,
+        is_visible: true,
+      }
+    : {
+        is_visible: false,
+      };
+
+  const { error: taskError } = await admin
     .from("focus_board_tasks")
-    .update({
-      is_visible: nextVisible === "true",
-    })
+    .update(taskUpdate)
     .eq("id", taskId)
     .eq("board_key", FOCUS_BOARD_KEY);
+
+  if (taskError) {
+    throw new Error(taskError.message);
+  }
+
+  if (shouldShow) {
+    const { error: metricsError } = await admin.from("focus_board_task_metrics").update({ is_active: true }).eq("task_id", taskId);
+
+    if (metricsError) {
+      throw new Error(metricsError.message);
+    }
+  }
 
   revalidateFocusPaths(runtime.settings.boardSlug, runtime.settings.adminSlug);
 }
@@ -180,6 +200,7 @@ export async function deleteFocusBoardTaskAction(formData: FormData) {
     .from("focus_board_tasks")
     .update({
       is_active: false,
+      is_visible: false,
     })
     .eq("id", taskId)
     .eq("board_key", FOCUS_BOARD_KEY);
