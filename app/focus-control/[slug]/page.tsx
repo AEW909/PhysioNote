@@ -1,10 +1,14 @@
 import { notFound } from "next/navigation";
 import {
   addFocusBoardTaskAction,
+  uploadFocusAssetAction,
   updateFocusBoardSettingsAction,
   updateFocusRewardTierAction,
 } from "@/app/focus-control/actions";
 import { FocusControlExistingGoals } from "@/components/focus/focus-control-existing-goals";
+import { FocusImageSelect } from "@/components/focus/focus-image-select";
+import { FocusPullToRefresh } from "@/components/focus/focus-pull-to-refresh";
+import { getFocusAssetOptions } from "@/lib/focus-board/assets";
 import { getFocusBoardRuntimeConfigByAdminSlug } from "@/lib/focus-board/runtime";
 
 type FocusControlPageProps = {
@@ -45,7 +49,10 @@ function FocusControlSection({
 
 export default async function FocusControlPage({ params }: FocusControlPageProps) {
   const { slug } = await params;
-  const runtime = await getFocusBoardRuntimeConfigByAdminSlug(slug);
+  const [runtime, assets] = await Promise.all([
+    getFocusBoardRuntimeConfigByAdminSlug(slug),
+    getFocusAssetOptions(),
+  ]);
 
   if (!runtime) {
     notFound();
@@ -53,6 +60,7 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
 
   return (
     <main className="shell focus-public-page focus-public-page-neon focus-board-shell-neon focus-control-page">
+      <FocusPullToRefresh label="Release to refresh controls" />
       <section className="focus-arcade-hero focus-control-hero">
         <p className="focus-kicker">Secret focus control room</p>
         <h1>Tune the game board</h1>
@@ -144,10 +152,12 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
                   <option value="toggle">Toggle</option>
                 </select>
               </label>
-              <label className="field">
-                <span>Sticker path (optional)</span>
-                <input name="stickerSrc" placeholder="/focus/mascot-rainbow.svg" />
-              </label>
+              <FocusImageSelect
+                assets={assets}
+                label="Sticker image"
+                name="stickerSrc"
+                value="/focus/mascot-rainbow.svg"
+              />
               <label className="field">
                 <span>Sticker alt (optional)</span>
                 <input name="stickerAlt" placeholder="Custom goal sticker" />
@@ -162,6 +172,32 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
 
       <section className="focus-control-stack">
         <FocusControlSection
+          eyebrow="Images"
+          summary="Upload extra artwork for challenge stickers and reward ladder images."
+          title="Focus image library"
+        >
+          <form action={uploadFocusAssetAction} className="focus-control-form">
+            <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
+            <label className="field">
+              <span>Upload image</span>
+              <input accept="image/*" name="asset" type="file" required />
+            </label>
+            <button className="button button-primary" type="submit">
+              Upload image
+            </button>
+          </form>
+          <div className="focus-asset-grid">
+            {assets.map((asset) => (
+              <div className="focus-asset-chip" key={`${asset.source}:${asset.value}`}>
+                <img alt="" src={asset.value} />
+                <span>{asset.label}</span>
+                <small>{asset.source === "uploaded" ? "Uploaded" : "Bundled"}</small>
+              </div>
+            ))}
+          </div>
+        </FocusControlSection>
+
+        <FocusControlSection
           defaultOpen
           eyebrow="Goals"
           summary={`${runtime.allTasks.length} challenge${runtime.allTasks.length === 1 ? "" : "s"} currently on the board.`}
@@ -170,6 +206,7 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
           <div className="focus-control-stack">
             <FocusControlExistingGoals
               adminSlug={runtime.settings.adminSlug}
+              assets={assets}
               tasks={runtime.allTasks}
             />
           </div>
@@ -210,14 +247,18 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
                   </label>
                 </div>
                 <div className="focus-control-two-up">
-                  <label className="field">
-                    <span>Locked image path</span>
-                    <input defaultValue={reward.lockedStickerSrc} name="lockedStickerSrc" />
-                  </label>
-                  <label className="field">
-                    <span>Unlocked image path</span>
-                    <input defaultValue={reward.unlockedStickerSrc} name="unlockedStickerSrc" />
-                  </label>
+                  <FocusImageSelect
+                    assets={assets}
+                    label="Locked image"
+                    name="lockedStickerSrc"
+                    value={reward.lockedStickerSrc}
+                  />
+                  <FocusImageSelect
+                    assets={assets}
+                    label="Unlocked image"
+                    name="unlockedStickerSrc"
+                    value={reward.unlockedStickerSrc}
+                  />
                 </div>
                 <button className="button button-secondary" type="submit">
                   Save prize

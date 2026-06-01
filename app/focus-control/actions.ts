@@ -8,6 +8,7 @@ import {
   normaliseFocusKey,
   type FocusMetricKind,
 } from "@/lib/focus-board/config";
+import { FOCUS_ASSET_BUCKET, FOCUS_ASSET_FOLDER } from "@/lib/focus-board/assets";
 import { getFocusBoardRuntimeConfigByAdminSlug } from "@/lib/focus-board/runtime";
 
 function getValue(formData: FormData, key: string) {
@@ -36,6 +37,45 @@ function revalidateFocusPaths(boardSlug: string, adminSlug: string) {
   revalidatePath(`/focus-control/${adminSlug}`);
 }
 
+function getFile(formData: FormData, key: string) {
+  const value = formData.get(key);
+  return value instanceof File && value.size > 0 ? value : null;
+}
+
+function getFileExtension(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  if (extension && /^[a-z0-9]+$/.test(extension)) {
+    return extension;
+  }
+
+  return file.type === "image/svg+xml" ? "svg" : "png";
+}
+
+async function ensureFocusAssetBucket() {
+  const admin = createSupabaseAdminClient();
+  const { data: buckets, error: listError } = await admin.storage.listBuckets();
+
+  if (listError) {
+    throw new Error(listError.message);
+  }
+
+  if (buckets?.some((bucket) => bucket.name === FOCUS_ASSET_BUCKET)) {
+    return admin;
+  }
+
+  const { error } = await admin.storage.createBucket(FOCUS_ASSET_BUCKET, {
+    public: true,
+    allowedMimeTypes: ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"],
+    fileSizeLimit: 8 * 1024 * 1024,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return admin;
+}
+
 export async function updateFocusBoardSettingsAction(formData: FormData) {
   const adminSlug = getValue(formData, "adminSlug");
   const runtime = await getAdminContext(adminSlug);
@@ -53,6 +93,41 @@ export async function updateFocusBoardSettingsAction(formData: FormData) {
       weekly_target: weeklyTarget,
     })
     .eq("board_key", FOCUS_BOARD_KEY);
+
+  revalidateFocusPaths(runtime.settings.boardSlug, runtime.settings.adminSlug);
+}
+
+export async function uploadFocusAssetAction(formData: FormData) {
+  const adminSlug = getValue(formData, "adminSlug");
+  const runtime = await getAdminContext(adminSlug);
+  const file = getFile(formData, "asset");
+
+  if (!file) {
+    throw new Error("Choose an image to upload.");
+  }
+
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Focus assets must be image files.");
+  }
+
+  if (file.size > 8 * 1024 * 1024) {
+    throw new Error("Focus assets must be 8 MB or smaller.");
+  }
+
+  const admin = await ensureFocusAssetBucket();
+  const baseName = normaliseFocusKey(file.name.replace(/\.[^.]+$/, ""));
+  const extension = getFileExtension(file);
+  const storagePath = `${FOCUS_ASSET_FOLDER}/${Date.now()}-${baseName}.${extension}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const { error } = await admin.storage.from(FOCUS_ASSET_BUCKET).upload(storagePath, buffer, {
+    contentType: file.type || "application/octet-stream",
+    upsert: false,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
 
   revalidateFocusPaths(runtime.settings.boardSlug, runtime.settings.adminSlug);
 }

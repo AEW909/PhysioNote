@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { FocusBoard } from "@/components/focus/focus-board";
+import { FocusPullToRefresh } from "@/components/focus/focus-pull-to-refresh";
 import { getFocusBoardRuntimeConfigByPublicSlug } from "@/lib/focus-board/runtime";
 import { getFocusBoardData } from "@/lib/focus-board/queries";
 
@@ -26,6 +27,7 @@ export default async function FocusBoardPage({ params, searchParams }: FocusBoar
 
   return (
     <main className="shell focus-public-page focus-public-page-neon">
+      <FocusPullToRefresh label="Release to refresh board" />
       <FocusBoard board={board} initialView={initialView} />
     </main>
   );

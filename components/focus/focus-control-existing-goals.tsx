@@ -11,10 +11,13 @@ import {
   updateFocusBoardTaskAction,
 } from "@/app/focus-control/actions";
 import { FocusDeleteButton } from "@/components/focus/focus-delete-button";
+import { FocusImageSelect } from "@/components/focus/focus-image-select";
+import type { FocusAssetOption } from "@/lib/focus-board/assets";
 import type { FocusBoardTask, FocusMetricKind } from "@/lib/focus-board/config";
 
 type FocusControlExistingGoalsProps = {
   adminSlug: string;
+  assets: FocusAssetOption[];
   tasks: FocusBoardTask[];
 };
 
@@ -101,7 +104,7 @@ function draftsMatch<T extends Record<string, string>>(left: T, right: T) {
   return Object.keys(left).every((key) => left[key] === right[key]);
 }
 
-export function FocusControlExistingGoals({ adminSlug, tasks }: FocusControlExistingGoalsProps) {
+export function FocusControlExistingGoals({ adminSlug, assets, tasks }: FocusControlExistingGoalsProps) {
   const [dirtyKeys, setDirtyKeys] = useState<Record<string, boolean>>({});
 
   const hasUnsavedChanges = useMemo(
@@ -135,6 +138,7 @@ export function FocusControlExistingGoals({ adminSlug, tasks }: FocusControlExis
       {tasks.map((task) => (
         <FocusControlTaskEditor
           adminSlug={adminSlug}
+          assets={assets}
           key={task.id ?? task.key}
           onDirtyChange={setDirtyState}
           task={task}
@@ -146,11 +150,12 @@ export function FocusControlExistingGoals({ adminSlug, tasks }: FocusControlExis
 
 type FocusControlTaskEditorProps = {
   adminSlug: string;
+  assets: FocusAssetOption[];
   task: FocusBoardTask;
   onDirtyChange: (key: string, dirty: boolean) => void;
 };
 
-function FocusControlTaskEditor({ adminSlug, task, onDirtyChange }: FocusControlTaskEditorProps) {
+function FocusControlTaskEditor({ adminSlug, assets, task, onDirtyChange }: FocusControlTaskEditorProps) {
   const router = useRouter();
   const [taskDraft, setTaskDraft] = useState<TaskDraft>(() => taskToDraft(task));
   const [taskBaseline, setTaskBaseline] = useState<TaskDraft>(() => taskToDraft(task));
@@ -286,13 +291,12 @@ function FocusControlTaskEditor({ adminSlug, task, onDirtyChange }: FocusControl
             </label>
 
             <div className="focus-control-two-up">
-              <label className="field">
-                <span>Sticker path</span>
-                <input
-                  onChange={(event) => setTaskDraft((current) => ({ ...current, stickerSrc: event.target.value }))}
-                  value={taskDraft.stickerSrc}
-                />
-              </label>
+              <FocusImageSelect
+                assets={assets}
+                label="Sticker image"
+                onChange={(value) => setTaskDraft((current) => ({ ...current, stickerSrc: value }))}
+                value={taskDraft.stickerSrc}
+              />
               <label className="field">
                 <span>Sticker alt</span>
                 <input

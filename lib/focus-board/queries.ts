@@ -43,12 +43,6 @@ function parseIsoDate(value?: string | null) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function addDays(date: Date, days: number) {
-  const copy = new Date(date);
-  copy.setUTCDate(copy.getUTCDate() + days);
-  return copy;
-}
-
 function addMonths(date: Date, months: number) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1));
 }

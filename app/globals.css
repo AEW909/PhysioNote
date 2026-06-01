@@ -1486,6 +1486,55 @@ a {
   color: rgba(244, 240, 255, 0.44);
 }
 
+.focus-pull-refresh {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(10, 9, 20, 0.92);
+  color: #f4f0ff;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  opacity: 0;
+  pointer-events: none;
+  text-transform: uppercase;
+  transition: opacity 160ms ease, transform 160ms ease;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.36);
+}
+
+.focus-pull-refresh-visible {
+  opacity: 1;
+}
+
+.focus-pull-refresh span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #59f4d6;
+  box-shadow: 0 0 18px rgba(89, 244, 214, 0.7);
+}
+
+.focus-pull-refresh-spinner {
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-top-color: #59f4d6;
+  background: transparent;
+  animation: focus-spin 700ms linear infinite;
+}
+
+@keyframes focus-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .focus-control-grid,
 .focus-control-two-up,
 .focus-control-three-up {
@@ -1510,6 +1559,75 @@ a {
 .focus-control-metric-stack {
   display: grid;
   gap: 18px;
+}
+
+.focus-image-select-field {
+  gap: 10px;
+}
+
+.focus-image-select-preview {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 64px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(244, 240, 255, 0.7);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.focus-image-select-preview img {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.focus-asset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.focus-asset-chip {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-height: 160px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.focus-asset-chip img {
+  width: 100%;
+  height: 86px;
+  object-fit: contain;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.focus-asset-chip span,
+.focus-asset-chip small {
+  overflow-wrap: anywhere;
+}
+
+.focus-asset-chip span {
+  color: #f4f0ff;
+  font-weight: 800;
+}
+
+.focus-asset-chip small {
+  color: rgba(244, 240, 255, 0.58);
+  font-size: 0.72rem;
+  text-transform: uppercase;
 }
 
 .focus-control-card,
