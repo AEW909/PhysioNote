@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getBundledFocusFallback } from "@/lib/focus-board/assets";
 import {
@@ -173,6 +174,7 @@ function mapRewards(rows?: FocusRewardTierRow[] | null) {
 }
 
 export async function getFocusBoardRuntimeConfig(): Promise<FocusBoardRuntimeConfig> {
+  noStore();
   const admin = createSupabaseAdminClient();
 
   const [settingsResult, tasksResult, metricsResult, rewardsResult] = await Promise.all([

@@ -4,6 +4,8 @@ import { FocusPullToRefresh } from "@/components/focus/focus-pull-to-refresh";
 import { getFocusBoardRuntimeConfigByPublicSlug } from "@/lib/focus-board/runtime";
 import { getFocusBoardData } from "@/lib/focus-board/queries";
 
+export const dynamic = "force-dynamic";
+
 type FocusBoardPageProps = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ month?: string; week?: string; view?: string }>;

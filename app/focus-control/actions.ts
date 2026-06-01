@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
   FOCUS_BOARD_KEY,
@@ -374,7 +375,7 @@ export async function updateFocusRewardTierAction(formData: FormData) {
     throw new Error("Reward id missing.");
   }
 
-  await admin
+  const { error } = await admin
     .from("focus_board_reward_tiers")
     .update({
       label: getValue(formData, "label"),
@@ -388,5 +389,10 @@ export async function updateFocusRewardTierAction(formData: FormData) {
     .eq("id", rewardId)
     .eq("board_key", FOCUS_BOARD_KEY);
 
+  if (error) {
+    throw new Error(error.message);
+  }
+
   revalidateFocusPaths(runtime.settings.boardSlug, runtime.settings.adminSlug);
+  redirect(`/focus-control/${runtime.settings.adminSlug}`);
 }

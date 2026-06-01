@@ -11,6 +11,8 @@ import { FocusPullToRefresh } from "@/components/focus/focus-pull-to-refresh";
 import { getFocusAssetOptions } from "@/lib/focus-board/assets";
 import { getFocusBoardRuntimeConfigByAdminSlug } from "@/lib/focus-board/runtime";
 
+export const dynamic = "force-dynamic";
+
 type FocusControlPageProps = {
   params: Promise<{ slug: string }>;
 };

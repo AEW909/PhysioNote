@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { FOCUS_BOARD_KEY } from "@/lib/focus-board/config";
 import { getFocusBoardRuntimeConfig } from "@/lib/focus-board/runtime";
@@ -89,6 +90,7 @@ function buildMonthHistory(currentMonthStart: Date, monthPointMap: Map<string, n
 }
 
 export async function getFocusBoardData(params: FocusBoardParams = {}) {
+  noStore();
   const admin = createSupabaseAdminClient();
   const runtime = await getFocusBoardRuntimeConfig();
   const currentMonthStart = getMonthStart();

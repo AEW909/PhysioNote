@@ -1,5 +1,6 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
+import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const FOCUS_ASSET_BUCKET = "focus-assets";
@@ -91,6 +92,7 @@ async function listUploadedFocusAssets(): Promise<FocusAssetOption[]> {
 }
 
 export async function getFocusAssetOptions() {
+  noStore();
   const [bundled, uploaded] = await Promise.all([
     listBundledFocusAssets(),
     listUploadedFocusAssets(),
