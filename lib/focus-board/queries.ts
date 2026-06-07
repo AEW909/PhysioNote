@@ -15,6 +15,7 @@ type FocusBoardEventRow = {
 };
 
 type FocusBoardParams = {
+  history?: string;
   month?: string;
   week?: string;
 };
@@ -75,16 +76,16 @@ function formatMonthLabel(monthKey: string) {
   }).format(date);
 }
 
-function buildMonthHistory(currentMonthStart: Date, monthPointMap: Map<string, number>) {
+function buildMonthHistory(historyEnd: Date, currentMonthKey: string, monthPointMap: Map<string, number>) {
   return Array.from({ length: 6 }, (_, index) => {
-    const monthStart = addMonths(currentMonthStart, index - 5);
+    const monthStart = addMonths(historyEnd, index - 5);
     const monthKey = toIsoDate(monthStart);
 
     return {
       monthKey,
-      label: new Intl.DateTimeFormat("en-GB", { month: "short" }).format(monthStart),
+      label: new Intl.DateTimeFormat("en-GB", { month: "short", year: "2-digit" }).format(monthStart),
       points: monthPointMap.get(monthKey) ?? 0,
-      isCurrent: index === 5,
+      isCurrent: monthKey === currentMonthKey,
     };
   });
 }
@@ -100,6 +101,11 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
   const requestedMonthStart = parseIsoDate(params.month) ?? currentMonthStart;
   const selectedMonthStart = getMonthStart(requestedMonthStart);
   const selectedMonthKey = toIsoDate(selectedMonthStart);
+  const requestedHistoryEnd = parseIsoDate(params.history);
+  const historyEndStart =
+    requestedHistoryEnd && requestedHistoryEnd <= currentMonthStart
+      ? getMonthStart(requestedHistoryEnd)
+      : currentMonthStart;
   const selectedWeekKeys = listMonthWeeks(selectedMonthStart);
   const requestedWeekKey = params.week && selectedWeekKeys.includes(params.week) ? params.week : undefined;
   const fallbackWeekKey =
@@ -108,15 +114,18 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
       : selectedWeekKeys.at(0) ?? currentWeekKey;
   const selectedWeekKey = requestedWeekKey ?? fallbackWeekKey;
 
-  const monthHistoryStart = addMonths(currentMonthStart, -5);
-  const monthHistoryEnd = addMonths(currentMonthStart, 1);
+  const monthHistoryStart = addMonths(historyEndStart, -5);
+  const monthHistoryEnd = addMonths(historyEndStart, 1);
+  const queryStart = monthHistoryStart < selectedMonthStart ? monthHistoryStart : selectedMonthStart;
+  const selectedMonthEnd = addMonths(selectedMonthStart, 1);
+  const queryEnd = monthHistoryEnd > selectedMonthEnd ? monthHistoryEnd : selectedMonthEnd;
 
   const { data, error } = await admin
     .from("focus_board_events")
     .select("id, board_key, month_key, week_start, task_key, metric_key, points, created_at")
     .eq("board_key", FOCUS_BOARD_KEY)
-    .gte("month_key", toIsoDate(monthHistoryStart))
-    .lt("month_key", toIsoDate(monthHistoryEnd))
+    .gte("month_key", toIsoDate(queryStart))
+    .lt("month_key", toIsoDate(queryEnd))
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -187,6 +196,12 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
   const canGoNextWeek = nextWeekKey ? nextWeekKey <= currentWeekKey : false;
   const previousMonthKey = toIsoDate(addMonths(selectedMonthStart, -1));
   const nextMonthKey = selectedMonthKey < currentMonthKey ? toIsoDate(addMonths(selectedMonthStart, 1)) : null;
+  const previousHistoryEndKey = toIsoDate(addMonths(historyEndStart, -6));
+  const nextHistoryCandidate = addMonths(historyEndStart, 6);
+  const nextHistoryEndKey =
+    historyEndStart < currentMonthStart
+      ? toIsoDate(nextHistoryCandidate > currentMonthStart ? currentMonthStart : nextHistoryCandidate)
+      : null;
 
   const monthlyBreakdown = runtime.tasks.map((task) => ({
     key: task.key,
@@ -195,7 +210,7 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
     points: selectedTaskPointMap.get(task.key) ?? 0,
   }));
 
-  const monthHistory = buildMonthHistory(currentMonthStart, monthPointMap);
+  const monthHistory = buildMonthHistory(historyEndStart, currentMonthKey, monthPointMap);
 
   return {
     boardKey: FOCUS_BOARD_KEY,
@@ -220,6 +235,8 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
       canGoNextWeek,
       previousMonthKey,
       nextMonthKey,
+      previousHistoryEndKey,
+      nextHistoryEndKey,
     },
     monthlyBreakdown: monthlyBreakdown.filter((item) => item.points > 0 || runtime.tasks.some((task) => task.key === item.key)),
     monthHistory,

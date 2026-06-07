@@ -66,6 +66,10 @@ function buildMonthHref(boardSlug: string, monthKey: string, view: FocusView) {
   return `/focus/${boardSlug}?month=${monthKey}&view=${view}`;
 }
 
+function buildHistoryHref(boardSlug: string, monthKey: string, historyEndKey: string) {
+  return `/focus/${boardSlug}?month=${monthKey}&history=${historyEndKey}&view=month`;
+}
+
 function buildLinePath(values: number[], width: number, height: number) {
   if (values.length === 0) {
     return "";
@@ -161,8 +165,9 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
     donutCircumference,
   );
 
-  const lineValues = board.weeks.map((week) => week.weekPoints);
+  const lineValues = board.monthHistory.map((month) => month.points);
   const linePath = buildLinePath(lineValues, 280, 120);
+  const historyRangeLabel = `${board.monthHistory[0]?.label ?? ""} - ${board.monthHistory.at(-1)?.label ?? ""}`;
 
   return (
     <div className="focus-board-shell focus-board-shell-neon">
@@ -468,28 +473,59 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                 <p className="focus-panel-label">Progress snapshot</p>
                 <h3>How the points stacked up</h3>
               </div>
+              <div className="focus-chart-nav">
+                <Link
+                  aria-label="Show previous six months"
+                  className="focus-nav-arrow"
+                  href={buildHistoryHref(
+                    board.settings.boardSlug,
+                    board.monthKey,
+                    board.navigation.previousHistoryEndKey,
+                  )}
+                  scroll={false}
+                >
+                  &lt;
+                </Link>
+                <span>{historyRangeLabel}</span>
+                {board.navigation.nextHistoryEndKey ? (
+                  <Link
+                    aria-label="Show next six months"
+                    className="focus-nav-arrow"
+                    href={buildHistoryHref(
+                      board.settings.boardSlug,
+                      board.monthKey,
+                      board.navigation.nextHistoryEndKey,
+                    )}
+                    scroll={false}
+                  >
+                    &gt;
+                  </Link>
+                ) : (
+                  <span className="focus-nav-arrow focus-nav-arrow-disabled">&gt;</span>
+                )}
+              </div>
             </div>
 
             <div className="focus-progress-story">
               <div className="focus-line-chart-wrap">
-                <svg aria-label="Weekly points chart" className="focus-line-chart" viewBox="0 0 280 120">
+                <svg aria-label="Monthly points chart" className="focus-line-chart" viewBox="0 0 280 120">
                   <path d="M0 115 H280" stroke="rgba(255,255,255,0.16)" strokeWidth="2" />
                   {linePath ? (
                     <>
                       <path d={linePath} fill="none" stroke="#00f5d4" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-                      {board.weeks.map((week, index) => {
+                      {board.monthHistory.map((month, index) => {
                         const maxValue = Math.max(...lineValues, 1);
-                        const x = board.weeks.length === 1 ? 140 : (index / (board.weeks.length - 1)) * 280;
-                        const y = 120 - (week.weekPoints / maxValue) * 110 - 5;
+                        const x = board.monthHistory.length === 1 ? 140 : (index / (board.monthHistory.length - 1)) * 280;
+                        const y = 120 - (month.points / maxValue) * 110 - 5;
 
-                        return <circle cx={x} cy={y} fill="#ff4dca" key={week.weekKey} r="5" />;
+                        return <circle cx={x} cy={y} fill={month.isCurrent ? "#95ff4a" : "#ff4dca"} key={month.monthKey} r="5" />;
                       })}
                     </>
                   ) : null}
                 </svg>
                 <div className="focus-line-chart-labels">
-                  {board.weeks.map((week) => (
-                    <span key={week.weekKey}>{formatWeekLabel(week.weekKey)}</span>
+                  {board.monthHistory.map((month) => (
+                    <span key={month.monthKey}>{month.label}</span>
                   ))}
                 </div>
               </div>

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 type FocusBoardPageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ month?: string; week?: string; view?: string }>;
+  searchParams: Promise<{ history?: string; month?: string; week?: string; view?: string }>;
 };
 
 export default async function FocusBoardPage({ params, searchParams }: FocusBoardPageProps) {
@@ -22,6 +22,7 @@ export default async function FocusBoardPage({ params, searchParams }: FocusBoar
   }
 
   const board = await getFocusBoardData({
+    history: query.history,
     month: query.month,
     week: query.week,
   });

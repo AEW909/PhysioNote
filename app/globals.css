@@ -2825,6 +2825,27 @@ a {
   letter-spacing: -0.03em;
 }
 
+.focus-progress-snapshot-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.focus-chart-nav {
+  display: grid;
+  grid-template-columns: 44px minmax(110px, auto) 44px;
+  gap: 10px;
+  align-items: center;
+}
+
+.focus-chart-nav > span:not(.focus-nav-arrow) {
+  color: rgba(244, 240, 255, 0.72);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+}
+
 .focus-progress-story {
   display: grid;
   gap: 16px;
@@ -2847,7 +2868,7 @@ a {
 
 .focus-line-chart-labels {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 6px;
   color: rgba(244, 240, 255, 0.7);
   font-size: 0.75rem;
@@ -3407,8 +3428,17 @@ a {
     justify-self: auto;
   }
 
+  .focus-progress-snapshot-head {
+    display: grid;
+    align-items: stretch;
+  }
+
+  .focus-chart-nav {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+  }
+
   .focus-line-chart-labels {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     font-size: 0.7rem;
   }
 
