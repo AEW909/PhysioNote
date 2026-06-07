@@ -253,20 +253,29 @@ export async function addFocusBoardMetricAction(formData: FormData) {
     throw new Error("Metric details missing.");
   }
 
-  const task = runtime.tasks.find((item) => item.id === taskId);
+  const task = runtime.allTasks.find((item) => item.id === taskId);
   if (!task) {
     throw new Error("Task not found.");
   }
 
-  await admin.from("focus_board_task_metrics").insert({
+  const metricKey = normaliseFocusKey(getValue(formData, "metricKey") || metricLabel);
+  const { error } = await admin.from("focus_board_task_metrics").insert({
     task_id: taskId,
-    metric_key: normaliseFocusKey(getValue(formData, "metricKey") || metricLabel),
+    metric_key: metricKey,
     label: metricLabel,
     target: Math.max(0, getIntValue(formData, "target", 0)),
     points: getIntValue(formData, "points", 1),
     kind: (getValue(formData, "kind") || "count") as FocusMetricKind,
     sort_order: task.metrics.length + 1,
   });
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error(`A metric named "${metricLabel}" already exists in this goal.`);
+    }
+
+    throw new Error(error.message);
+  }
 
   revalidateFocusPaths(runtime.settings.boardSlug, runtime.settings.adminSlug);
 }
@@ -340,7 +349,7 @@ export async function deleteFocusBoardMetricAction(formData: FormData) {
     throw new Error("Metric context missing.");
   }
 
-  const task = runtime.tasks.find((item) => item.id === taskId);
+  const task = runtime.allTasks.find((item) => item.id === taskId);
   if (!task) {
     throw new Error("Task not found.");
   }

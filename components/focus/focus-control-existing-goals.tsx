@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   addFocusBoardMetricAction,
@@ -164,6 +164,8 @@ function FocusControlTaskEditor({ adminSlug, assets, task, onDirtyChange }: Focu
   const [taskError, setTaskError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(task.isActive !== false && task.isVisible !== false);
+  const [addMetricError, setAddMetricError] = useState<string | null>(null);
+  const [isAddingMetric, startAddMetricTransition] = useTransition();
   const [isPendingTask, startTaskTransition] = useTransition();
 
   const taskDirty = !draftsMatch(taskDraft, taskBaseline);
@@ -211,6 +213,23 @@ function FocusControlTaskEditor({ adminSlug, assets, task, onDirtyChange }: Focu
       await toggleFocusBoardTaskVisibilityAction(formData);
       setIsVisible((current) => !current);
       router.refresh();
+    });
+  };
+
+  const addMetric = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+
+    startAddMetricTransition(async () => {
+      try {
+        await addFocusBoardMetricAction(formData);
+        setAddMetricError(null);
+        form.reset();
+        router.refresh();
+      } catch (error) {
+        setAddMetricError(error instanceof Error ? error.message : "Could not add the metric.");
+      }
     });
   };
 
@@ -333,7 +352,7 @@ function FocusControlTaskEditor({ adminSlug, assets, task, onDirtyChange }: Focu
               />
             ))}
 
-            <form action={addFocusBoardMetricAction} className="focus-control-metric-card focus-control-metric-card-new">
+            <form className="focus-control-metric-card focus-control-metric-card-new" onSubmit={addMetric}>
               <input name="adminSlug" type="hidden" value={adminSlug} />
               <input name="taskId" type="hidden" value={task.id} />
               <div className="focus-control-metric-card-head">
@@ -363,9 +382,10 @@ function FocusControlTaskEditor({ adminSlug, assets, task, onDirtyChange }: Focu
                   <input defaultValue={5} name="points" type="number" />
                 </label>
               </div>
-              <button className="button button-primary button-small" type="submit">
-                Add metric
+              <button className="button button-primary button-small" disabled={isAddingMetric} type="submit">
+                {isAddingMetric ? "Adding metric..." : "Add metric"}
               </button>
+              {addMetricError ? <p className="focus-control-error-tag">{addMetricError}</p> : null}
             </form>
           </div>
         </div>
