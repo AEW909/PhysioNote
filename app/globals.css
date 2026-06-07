@@ -2338,6 +2338,13 @@ a {
   gap: 10px;
 }
 
+.focus-reward-bubble-copy h3 {
+  margin: 0;
+  color: #fff;
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.35rem;
+}
+
 .focus-reward-bubble-base {
   background: linear-gradient(135deg, rgba(255, 77, 202, 0.12), rgba(142, 93, 255, 0.12));
 }

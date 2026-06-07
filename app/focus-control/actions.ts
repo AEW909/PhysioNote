@@ -98,6 +98,33 @@ export async function updateFocusBoardSettingsAction(formData: FormData) {
   revalidateFocusPaths(runtime.settings.boardSlug, runtime.settings.adminSlug);
 }
 
+export async function updateFocusWeeklyRewardAction(formData: FormData) {
+  const adminSlug = getValue(formData, "adminSlug");
+  const runtime = await getAdminContext(adminSlug);
+  const admin = createSupabaseAdminClient();
+
+  const { error } = await admin
+    .from("focus_board_settings")
+    .update({
+      weekly_target: Math.max(1, getIntValue(formData, "weeklyTarget", runtime.settings.weeklyTarget)),
+      weekly_reward_label: getValue(formData, "label") || runtime.weeklyReward.label,
+      weekly_reward_description: getValue(formData, "description") || runtime.weeklyReward.description,
+      weekly_reward_locked_sticker_src:
+        getValue(formData, "lockedStickerSrc") || runtime.weeklyReward.lockedStickerSrc,
+      weekly_reward_unlocked_sticker_src:
+        getValue(formData, "unlockedStickerSrc") || runtime.weeklyReward.unlockedStickerSrc,
+      weekly_reward_sticker_alt: getValue(formData, "stickerAlt") || runtime.weeklyReward.stickerAlt,
+    })
+    .eq("board_key", FOCUS_BOARD_KEY);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidateFocusPaths(runtime.settings.boardSlug, runtime.settings.adminSlug);
+  redirect(`/focus-control/${runtime.settings.adminSlug}`);
+}
+
 export async function uploadFocusAssetAction(formData: FormData) {
   const adminSlug = getValue(formData, "adminSlug");
   const runtime = await getAdminContext(adminSlug);

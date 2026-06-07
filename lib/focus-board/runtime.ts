@@ -5,6 +5,7 @@ import {
   DEFAULT_FOCUS_BOARD_SETTINGS,
   DEFAULT_FOCUS_BOARD_TASKS,
   DEFAULT_FOCUS_REWARD_TIERS,
+  DEFAULT_FOCUS_WEEKLY_REWARD,
   FOCUS_BOARD_ADMIN_SLUG,
   FOCUS_BOARD_KEY,
   FOCUS_BOARD_SLUG,
@@ -12,6 +13,7 @@ import {
   type FocusBoardTask,
   type FocusBoardTaskMetric,
   type FocusRewardTier,
+  type FocusWeeklyReward,
 } from "@/lib/focus-board/config";
 
 type FocusBoardSettingsRow = {
@@ -21,6 +23,11 @@ type FocusBoardSettingsRow = {
   title: string;
   subtitle: string;
   weekly_target: number;
+  weekly_reward_label: string;
+  weekly_reward_description: string;
+  weekly_reward_locked_sticker_src: string;
+  weekly_reward_unlocked_sticker_src: string;
+  weekly_reward_sticker_alt: string;
 };
 
 type FocusBoardTaskRow = {
@@ -68,6 +75,7 @@ export type FocusBoardRuntimeConfig = {
   tasks: FocusBoardTask[];
   allTasks: FocusBoardTask[];
   rewards: FocusRewardTier[];
+  weeklyReward: FocusWeeklyReward;
 };
 
 function buildFallbackConfig(): FocusBoardRuntimeConfig {
@@ -76,6 +84,7 @@ function buildFallbackConfig(): FocusBoardRuntimeConfig {
     tasks: DEFAULT_FOCUS_BOARD_TASKS,
     allTasks: DEFAULT_FOCUS_BOARD_TASKS,
     rewards: DEFAULT_FOCUS_REWARD_TIERS,
+    weeklyReward: DEFAULT_FOCUS_WEEKLY_REWARD,
   };
 }
 
@@ -91,6 +100,22 @@ function mapSettings(row?: FocusBoardSettingsRow | null): FocusBoardSettings {
     title: row.title || DEFAULT_FOCUS_BOARD_SETTINGS.title,
     subtitle: row.subtitle || DEFAULT_FOCUS_BOARD_SETTINGS.subtitle,
     weeklyTarget: row.weekly_target || DEFAULT_FOCUS_BOARD_SETTINGS.weeklyTarget,
+  };
+}
+
+function mapWeeklyReward(row?: FocusBoardSettingsRow | null): FocusWeeklyReward {
+  if (!row) {
+    return DEFAULT_FOCUS_WEEKLY_REWARD;
+  }
+
+  return {
+    label: row.weekly_reward_label || DEFAULT_FOCUS_WEEKLY_REWARD.label,
+    description: row.weekly_reward_description || DEFAULT_FOCUS_WEEKLY_REWARD.description,
+    lockedStickerSrc: row.weekly_reward_locked_sticker_src || DEFAULT_FOCUS_WEEKLY_REWARD.lockedStickerSrc,
+    lockedStickerFallbackSrc: getBundledFocusFallback(row.weekly_reward_locked_sticker_src),
+    unlockedStickerSrc: row.weekly_reward_unlocked_sticker_src || DEFAULT_FOCUS_WEEKLY_REWARD.unlockedStickerSrc,
+    unlockedStickerFallbackSrc: getBundledFocusFallback(row.weekly_reward_unlocked_sticker_src),
+    stickerAlt: row.weekly_reward_sticker_alt || DEFAULT_FOCUS_WEEKLY_REWARD.stickerAlt,
   };
 }
 
@@ -180,7 +205,9 @@ export async function getFocusBoardRuntimeConfig(): Promise<FocusBoardRuntimeCon
   const [settingsResult, tasksResult, metricsResult, rewardsResult] = await Promise.all([
     admin
       .from("focus_board_settings")
-      .select("board_key, board_slug, admin_slug, title, subtitle, weekly_target")
+      .select(
+        "board_key, board_slug, admin_slug, title, subtitle, weekly_target, weekly_reward_label, weekly_reward_description, weekly_reward_locked_sticker_src, weekly_reward_unlocked_sticker_src, weekly_reward_sticker_alt",
+      )
       .eq("board_key", FOCUS_BOARD_KEY)
       .maybeSingle<FocusBoardSettingsRow>(),
     admin
@@ -206,6 +233,7 @@ export async function getFocusBoardRuntimeConfig(): Promise<FocusBoardRuntimeCon
   }
 
   const settings = mapSettings((settingsResult.data as FocusBoardSettingsRow | null | undefined) ?? null);
+  const weeklyReward = mapWeeklyReward((settingsResult.data as FocusBoardSettingsRow | null | undefined) ?? null);
   const taskConfig = mapTasks(
     (tasksResult.data as FocusBoardTaskRow[] | null | undefined) ?? null,
     (metricsResult.data as FocusBoardTaskMetricRow[] | null | undefined) ?? null,
@@ -217,6 +245,7 @@ export async function getFocusBoardRuntimeConfig(): Promise<FocusBoardRuntimeCon
     tasks: taskConfig.tasks,
     allTasks: taskConfig.allTasks,
     rewards,
+    weeklyReward,
   };
 }
 

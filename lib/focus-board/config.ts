@@ -46,6 +46,16 @@ export type FocusRewardTier = {
   sortOrder?: number;
 };
 
+export type FocusWeeklyReward = {
+  label: string;
+  description: string;
+  lockedStickerSrc: string;
+  lockedStickerFallbackSrc?: string | null;
+  unlockedStickerSrc: string;
+  unlockedStickerFallbackSrc?: string | null;
+  stickerAlt: string;
+};
+
 export type FocusBoardSettings = {
   boardKey: string;
   boardSlug: string;
@@ -62,6 +72,14 @@ export const DEFAULT_FOCUS_BOARD_SETTINGS: FocusBoardSettings = {
   title: "Liona's tiny-task disco",
   subtitle: "Business admin, but make it feel like stickers, sparks, and prize tokens.",
   weeklyTarget: FOCUS_WEEKLY_TARGET,
+};
+
+export const DEFAULT_FOCUS_WEEKLY_REWARD: FocusWeeklyReward = {
+  label: "Weekly Treat",
+  description: "A small immediate reward for hitting the weekly points target.",
+  lockedStickerSrc: "/focus/liona-reward-spark-locked.png",
+  unlockedStickerSrc: "/focus/liona-reward-spark.png",
+  stickerAlt: "Weekly reward sticker",
 };
 
 export const DEFAULT_FOCUS_BOARD_TASKS: FocusBoardTask[] = [

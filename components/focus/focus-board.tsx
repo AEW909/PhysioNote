@@ -113,12 +113,9 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
   const [view, setView] = useState<FocusView>(initialView);
 
   const currentWeek = board.currentWeek;
-  const weeklyPrizeTier = currentWeek?.hitTarget
-    ? board.currentReward ?? board.rewardTiers[0]
-    : board.nextReward ?? board.rewardTiers[0];
   const weeklyPrizeImageSrc = currentWeek?.hitTarget
-    ? weeklyPrizeTier.unlockedStickerSrc
-    : weeklyPrizeTier.lockedStickerSrc;
+    ? board.weeklyReward.unlockedStickerSrc
+    : board.weeklyReward.lockedStickerSrc;
   const weeklyPercent = currentWeek
     ? clampPercent((currentWeek.weekPoints / board.weeklyTarget) * 100)
     : 0;
@@ -281,11 +278,13 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
             <div className={`focus-reward-bubble ${getRewardTone(currentWeek.weekPoints, board.weeklyTarget)}`}>
               <div className="focus-reward-bubble-layout">
                 <div className="focus-reward-bubble-copy">
+                  <p className="focus-panel-label">Immediate weekly reward</p>
+                  <h3>{board.weeklyReward.label}</h3>
                   <p className="focus-reward-bubble-topline">{getWeeklyHype(currentWeek.weekPoints, board.weeklyTarget)}</p>
                   <p className="focus-reward-bubble-main">
                     {currentWeek.hitTarget
-                      ? `Weekly prize unlocked: ${weeklyPrizeTier.label}. Absolutely milk the victory.`
-                      : `${Math.max(board.weeklyTarget - currentWeek.weekPoints, 0)} points until the weekly treat.`}
+                      ? `Unlocked now. ${board.weeklyReward.description}`
+                      : `${Math.max(board.weeklyTarget - currentWeek.weekPoints, 0)} points to go. ${board.weeklyReward.description}`}
                   </p>
                   <div className="focus-progress-track focus-progress-track-fat">
                     <div className="focus-progress-fill" style={{ width: `${weeklyPercent}%` }} />
@@ -298,12 +297,12 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                   }`}
                 >
                   <FocusImageWithFallback
-                    alt={weeklyPrizeTier.stickerAlt}
+                    alt={board.weeklyReward.stickerAlt}
                     className="focus-reward-bubble-photo"
                     fallbackSrc={
                       currentWeek.hitTarget
-                        ? weeklyPrizeTier.unlockedStickerFallbackSrc
-                        : weeklyPrizeTier.lockedStickerFallbackSrc
+                        ? board.weeklyReward.unlockedStickerFallbackSrc
+                        : board.weeklyReward.lockedStickerFallbackSrc
                     }
                     src={weeklyPrizeImageSrc}
                   />

@@ -4,6 +4,7 @@ import {
   uploadFocusAssetAction,
   updateFocusBoardSettingsAction,
   updateFocusRewardTierAction,
+  updateFocusWeeklyRewardAction,
 } from "@/app/focus-control/actions";
 import { FocusControlExistingGoals } from "@/components/focus/focus-control-existing-goals";
 import { FocusImageSelect } from "@/components/focus/focus-image-select";
@@ -98,10 +99,6 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
             <label className="field">
               <span>Main headline</span>
               <textarea defaultValue={runtime.settings.subtitle} name="subtitle" />
-            </label>
-            <label className="field">
-              <span>Weekly target</span>
-              <input defaultValue={runtime.settings.weeklyTarget} min={1} name="weeklyTarget" type="number" />
             </label>
             <button className="button button-primary" type="submit">
               Save board settings
@@ -214,6 +211,51 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
               tasks={runtime.allTasks}
             />
           </div>
+        </FocusControlSection>
+
+        <FocusControlSection
+          eyebrow="Weekly prize"
+          summary="The immediate reward Liona unlocks whenever she reaches the weekly points target."
+          title="Weekly reward"
+        >
+          <form action={updateFocusWeeklyRewardAction} className="focus-control-reward-row">
+            <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
+            <div className="focus-control-two-up">
+              <label className="field">
+                <span>Weekly points target</span>
+                <input defaultValue={runtime.settings.weeklyTarget} min={1} name="weeklyTarget" type="number" />
+              </label>
+              <label className="field">
+                <span>Reward label</span>
+                <input defaultValue={runtime.weeklyReward.label} name="label" />
+              </label>
+            </div>
+            <label className="field">
+              <span>Reward description</span>
+              <textarea defaultValue={runtime.weeklyReward.description} name="description" />
+            </label>
+            <label className="field">
+              <span>Sticker alt</span>
+              <input defaultValue={runtime.weeklyReward.stickerAlt} name="stickerAlt" />
+            </label>
+            <div className="focus-control-two-up">
+              <FocusImageSelect
+                assets={assets}
+                label="Locked image"
+                name="lockedStickerSrc"
+                value={runtime.weeklyReward.lockedStickerSrc}
+              />
+              <FocusImageSelect
+                assets={assets}
+                label="Unlocked image"
+                name="unlockedStickerSrc"
+                value={runtime.weeklyReward.unlockedStickerSrc}
+              />
+            </div>
+            <button className="button button-primary" type="submit">
+              Save weekly reward
+            </button>
+          </form>
         </FocusControlSection>
 
         <FocusControlSection

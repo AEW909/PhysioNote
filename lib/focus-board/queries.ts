@@ -227,6 +227,7 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
     nextReward,
     canEditSelectedWeek,
     settings: runtime.settings,
+    weeklyReward: runtime.weeklyReward,
     rewardTiers: runtime.rewards,
     navigation: {
       selectedWeekKey,
