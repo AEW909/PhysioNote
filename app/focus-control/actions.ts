@@ -294,6 +294,40 @@ export async function updateFocusBoardMetricAction(formData: FormData) {
   revalidateFocusPaths(runtime.settings.boardSlug, runtime.settings.adminSlug);
 }
 
+export async function toggleFocusBoardMetricVisibilityAction(formData: FormData) {
+  const adminSlug = getValue(formData, "adminSlug");
+  const runtime = await getAdminContext(adminSlug);
+  const admin = createSupabaseAdminClient();
+
+  const metricId = getValue(formData, "metricId");
+  const nextVisible = getValue(formData, "nextVisible");
+
+  if (!metricId) {
+    throw new Error("Metric id missing.");
+  }
+
+  const shouldShow = nextVisible === "true";
+  const { error } = await admin
+    .from("focus_board_task_metrics")
+    .update(
+      shouldShow
+        ? {
+            is_active: true,
+            is_visible: true,
+          }
+        : {
+            is_visible: false,
+          },
+    )
+    .eq("id", metricId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidateFocusPaths(runtime.settings.boardSlug, runtime.settings.adminSlug);
+}
+
 export async function deleteFocusBoardMetricAction(formData: FormData) {
   const adminSlug = getValue(formData, "adminSlug");
   const runtime = await getAdminContext(adminSlug);

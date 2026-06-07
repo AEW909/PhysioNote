@@ -14,6 +14,7 @@ export type FocusBoardTaskMetric = {
   kind: FocusMetricKind;
   sortOrder?: number;
   isActive?: boolean;
+  isVisible?: boolean;
 };
 
 export type FocusBoardTask = {

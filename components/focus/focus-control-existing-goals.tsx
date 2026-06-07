@@ -6,6 +6,7 @@ import {
   addFocusBoardMetricAction,
   deleteFocusBoardMetricAction,
   deleteFocusBoardTaskAction,
+  toggleFocusBoardMetricVisibilityAction,
   toggleFocusBoardTaskVisibilityAction,
   updateFocusBoardMetricAction,
   updateFocusBoardTaskAction,
@@ -393,6 +394,7 @@ function FocusControlMetricEditor({
   const [baseline, setBaseline] = useState<MetricDraft>(() => metricToDraft(metric));
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(metric.isActive !== false && metric.isVisible !== false);
   const [isPending, startTransition] = useTransition();
 
   const dirty = !draftsMatch(draft, baseline);
@@ -427,9 +429,37 @@ function FocusControlMetricEditor({
     });
   };
 
+  const toggleVisibility = () => {
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.set("adminSlug", adminSlug);
+        formData.set("metricId", metric.id ?? "");
+        formData.set("nextVisible", isVisible ? "false" : "true");
+
+        await toggleFocusBoardMetricVisibilityAction(formData);
+        setIsVisible((current) => !current);
+        setError(null);
+        router.refresh();
+      } catch (actionError) {
+        setError(actionError instanceof Error ? actionError.message : "Could not change metric visibility.");
+      }
+    });
+  };
+
   return (
-    <div className="focus-control-metric-card">
-      <div className="focus-control-metric-delete">
+    <div className={`focus-control-metric-card ${isVisible ? "" : "focus-control-metric-card-hidden"}`}>
+      <div className="focus-control-metric-actions">
+        <button
+          aria-label={isVisible ? `Hide metric ${metric.label}` : `Show metric ${metric.label}`}
+          className={`focus-visibility-icon ${isVisible ? "focus-visibility-icon-live" : "focus-visibility-icon-hidden"}`}
+          disabled={isPending}
+          onClick={toggleVisibility}
+          title={isVisible ? "Hide metric from Liona" : "Show metric to Liona"}
+          type="button"
+        >
+          {isVisible ? "◉" : "○"}
+        </button>
         <FocusDeleteButton
           action={deleteFocusBoardMetricAction}
           confirmMessage={`Delete the "${metric.label}" metric from "${task.title}"? Existing historical points will be preserved.`}
@@ -448,7 +478,16 @@ function FocusControlMetricEditor({
           <p className="eyebrow">Metric</p>
           <h4>{draft.label || "Untitled metric"}</h4>
         </div>
-        {dirty ? <span className="focus-control-dirty-pill">Unsaved</span> : null}
+        <div className="focus-control-metric-state">
+          <span
+            className={`focus-control-task-status ${
+              isVisible ? "focus-control-task-status-live" : "focus-control-task-status-hidden"
+            }`}
+          >
+            {isVisible ? "Visible" : "Hidden"}
+          </span>
+          {dirty ? <span className="focus-control-dirty-pill">Unsaved</span> : null}
+        </div>
       </div>
 
       <div className="focus-control-metric-fields">

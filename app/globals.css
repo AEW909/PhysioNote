@@ -2092,11 +2092,14 @@ a {
   gap: 8px;
 }
 
-.focus-control-metric-delete {
+.focus-control-metric-actions {
   position: absolute;
   top: 12px;
   right: 12px;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .focus-delete-icon {
@@ -2218,16 +2221,30 @@ a {
     rgba(255, 255, 255, 0.05);
 }
 
+.focus-control-metric-card-hidden {
+  border-color: rgba(255, 216, 77, 0.2);
+  background:
+    radial-gradient(circle at top right, rgba(255, 216, 77, 0.08), transparent 30%),
+    rgba(255, 255, 255, 0.035);
+}
+
 .focus-control-metric-card-head {
   display: grid;
   gap: 6px;
-  padding-right: 40px;
+  padding-right: 92px;
 }
 
 .focus-control-metric-card-head h4 {
   margin: 0;
   color: #fff;
   font-size: 1rem;
+}
+
+.focus-control-metric-state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 
 .focus-control-metric-fields {

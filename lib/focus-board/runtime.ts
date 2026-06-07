@@ -57,6 +57,7 @@ type FocusBoardTaskMetricRow = {
   kind: FocusBoardTaskMetric["kind"];
   sort_order: number;
   is_active: boolean;
+  is_visible: boolean;
 };
 
 type FocusRewardTierRow = {
@@ -147,6 +148,7 @@ function mapTasks(taskRows: FocusBoardTaskRow[] | null, metricRows: FocusBoardTa
       kind: row.kind,
       sortOrder: row.sort_order,
       isActive: row.is_active,
+      isVisible: row.is_visible,
     });
     metricsByTask.set(row.task_id, metrics);
   }
@@ -177,7 +179,9 @@ function mapTasks(taskRows: FocusBoardTaskRow[] | null, metricRows: FocusBoardTa
       .filter((task) => task.isActive !== false && task.isVisible !== false)
       .map((task) => ({
         ...task,
-        metrics: task.metrics.filter((metric) => metric.isActive !== false),
+        metrics: task.metrics.filter(
+          (metric) => metric.isActive !== false && metric.isVisible !== false,
+        ),
       }))
       .filter((task) => task.metrics.length > 0),
   };
@@ -224,7 +228,7 @@ export async function getFocusBoardRuntimeConfig(): Promise<FocusBoardRuntimeCon
       .order("sort_order", { ascending: true }),
     admin
       .from("focus_board_task_metrics")
-      .select("id, task_id, metric_key, label, target, points, kind, sort_order, is_active")
+      .select("id, task_id, metric_key, label, target, points, kind, sort_order, is_active, is_visible")
       .order("sort_order", { ascending: true }),
     admin
       .from("focus_board_reward_tiers")
