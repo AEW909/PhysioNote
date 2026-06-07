@@ -310,10 +310,19 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                   <p className="focus-panel-label">Immediate weekly reward</p>
                   <h3>{board.weeklyReward.label}</h3>
                   <p className="focus-reward-bubble-topline">{getWeeklyHype(currentWeek.weekPoints, board.weeklyTarget)}</p>
+                  <p
+                    className={`focus-reward-state ${
+                      currentWeek.hitTarget ? "focus-reward-state-unlocked" : "focus-reward-state-locked"
+                    }`}
+                  >
+                    {currentWeek.hitTarget
+                      ? "Now unlocked"
+                      : `${Math.max(board.weeklyTarget - currentWeek.weekPoints, 0)} points to go`}
+                  </p>
                   <p className="focus-reward-bubble-main">
                     {currentWeek.hitTarget
-                      ? `Unlocked now. ${board.weeklyReward.description}`
-                      : `${Math.max(board.weeklyTarget - currentWeek.weekPoints, 0)} points to go. ${board.weeklyReward.description}`}
+                      ? board.weeklyReward.unlockedDescription
+                      : board.weeklyReward.lockedDescription}
                   </p>
                   <div className="focus-progress-track focus-progress-track-fat">
                     <div className="focus-progress-fill" style={{ width: `${weeklyPercent}%` }} />

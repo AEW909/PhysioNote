@@ -25,6 +25,8 @@ type FocusBoardSettingsRow = {
   weekly_target: number;
   weekly_reward_label: string;
   weekly_reward_description: string;
+  weekly_reward_locked_description: string;
+  weekly_reward_unlocked_description: string;
   weekly_reward_locked_sticker_src: string;
   weekly_reward_unlocked_sticker_src: string;
   weekly_reward_sticker_alt: string;
@@ -110,7 +112,12 @@ function mapWeeklyReward(row?: FocusBoardSettingsRow | null): FocusWeeklyReward 
 
   return {
     label: row.weekly_reward_label || DEFAULT_FOCUS_WEEKLY_REWARD.label,
-    description: row.weekly_reward_description || DEFAULT_FOCUS_WEEKLY_REWARD.description,
+    lockedDescription:
+      row.weekly_reward_locked_description || DEFAULT_FOCUS_WEEKLY_REWARD.lockedDescription,
+    unlockedDescription:
+      row.weekly_reward_unlocked_description ||
+      row.weekly_reward_description ||
+      DEFAULT_FOCUS_WEEKLY_REWARD.unlockedDescription,
     lockedStickerSrc: row.weekly_reward_locked_sticker_src || DEFAULT_FOCUS_WEEKLY_REWARD.lockedStickerSrc,
     lockedStickerFallbackSrc: getBundledFocusFallback(row.weekly_reward_locked_sticker_src),
     unlockedStickerSrc: row.weekly_reward_unlocked_sticker_src || DEFAULT_FOCUS_WEEKLY_REWARD.unlockedStickerSrc,
@@ -206,7 +213,7 @@ export async function getFocusBoardRuntimeConfig(): Promise<FocusBoardRuntimeCon
     admin
       .from("focus_board_settings")
       .select(
-        "board_key, board_slug, admin_slug, title, subtitle, weekly_target, weekly_reward_label, weekly_reward_description, weekly_reward_locked_sticker_src, weekly_reward_unlocked_sticker_src, weekly_reward_sticker_alt",
+        "board_key, board_slug, admin_slug, title, subtitle, weekly_target, weekly_reward_label, weekly_reward_description, weekly_reward_locked_description, weekly_reward_unlocked_description, weekly_reward_locked_sticker_src, weekly_reward_unlocked_sticker_src, weekly_reward_sticker_alt",
       )
       .eq("board_key", FOCUS_BOARD_KEY)
       .maybeSingle<FocusBoardSettingsRow>(),

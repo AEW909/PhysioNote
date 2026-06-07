@@ -2564,6 +2564,30 @@ a {
   text-transform: uppercase;
 }
 
+.focus-reward-state {
+  justify-self: start;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.focus-reward-state-locked {
+  background: rgba(255, 156, 227, 0.1);
+  color: #ff9ce3;
+}
+
+.focus-reward-state-unlocked {
+  background: rgba(149, 255, 74, 0.12);
+  color: #95ff4a;
+  box-shadow: 0 0 18px rgba(149, 255, 74, 0.12);
+}
+
 .focus-reward-bubble-main,
 .focus-month-peek p,
 .focus-month-headline p,

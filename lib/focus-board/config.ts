@@ -48,7 +48,8 @@ export type FocusRewardTier = {
 
 export type FocusWeeklyReward = {
   label: string;
-  description: string;
+  lockedDescription: string;
+  unlockedDescription: string;
   lockedStickerSrc: string;
   lockedStickerFallbackSrc?: string | null;
   unlockedStickerSrc: string;
@@ -76,7 +77,8 @@ export const DEFAULT_FOCUS_BOARD_SETTINGS: FocusBoardSettings = {
 
 export const DEFAULT_FOCUS_WEEKLY_REWARD: FocusWeeklyReward = {
   label: "Weekly Treat",
-  description: "A small immediate reward for hitting the weekly points target.",
+  lockedDescription: "Keep stacking points to unlock this week's reward.",
+  unlockedDescription: "A small immediate reward for hitting the weekly points target.",
   lockedStickerSrc: "/focus/liona-reward-spark-locked.png",
   unlockedStickerSrc: "/focus/liona-reward-spark.png",
   stickerAlt: "Weekly reward sticker",

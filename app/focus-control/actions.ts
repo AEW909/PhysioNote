@@ -68,7 +68,10 @@ export async function updateFocusWeeklyRewardAction(formData: FormData) {
     .update({
       weekly_target: Math.max(1, getIntValue(formData, "weeklyTarget", runtime.settings.weeklyTarget)),
       weekly_reward_label: getValue(formData, "label") || runtime.weeklyReward.label,
-      weekly_reward_description: getValue(formData, "description") || runtime.weeklyReward.description,
+      weekly_reward_locked_description:
+        getValue(formData, "lockedDescription") || runtime.weeklyReward.lockedDescription,
+      weekly_reward_unlocked_description:
+        getValue(formData, "unlockedDescription") || runtime.weeklyReward.unlockedDescription,
       weekly_reward_locked_sticker_src:
         getValue(formData, "lockedStickerSrc") || runtime.weeklyReward.lockedStickerSrc,
       weekly_reward_unlocked_sticker_src:

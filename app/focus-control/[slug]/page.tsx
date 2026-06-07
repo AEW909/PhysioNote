@@ -221,10 +221,22 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
                 <input defaultValue={runtime.weeklyReward.label} name="label" />
               </label>
             </div>
-            <label className="field">
-              <span>Reward description</span>
-              <textarea defaultValue={runtime.weeklyReward.description} name="description" />
-            </label>
+            <div className="focus-control-two-up">
+              <label className="field">
+                <span>Text while locked</span>
+                <textarea
+                  defaultValue={runtime.weeklyReward.lockedDescription}
+                  name="lockedDescription"
+                />
+              </label>
+              <label className="field">
+                <span>Text once unlocked</span>
+                <textarea
+                  defaultValue={runtime.weeklyReward.unlockedDescription}
+                  name="unlockedDescription"
+                />
+              </label>
+            </div>
             <label className="field">
               <span>Sticker alt</span>
               <input defaultValue={runtime.weeklyReward.stickerAlt} name="stickerAlt" />
