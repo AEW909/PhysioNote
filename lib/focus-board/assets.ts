@@ -2,9 +2,7 @@ import { readdir } from "node:fs/promises";
 import path from "node:path";
 import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-
-export const FOCUS_ASSET_BUCKET = "focus-assets";
-export const FOCUS_ASSET_FOLDER = "focus";
+import { FOCUS_ASSET_BUCKET, FOCUS_ASSET_FOLDER } from "@/lib/focus-board/asset-constants";
 
 const PUBLIC_FOCUS_DIR = path.join(process.cwd(), "public", "focus");
 const IMAGE_EXTENSIONS = new Set([".gif", ".jpg", ".jpeg", ".png", ".svg", ".webp"]);
@@ -44,6 +42,7 @@ export function getBundledFocusFallback(src: string | null | undefined) {
 function formatAssetLabel(filename: string) {
   return filename
     .replace(/\.[^.]+$/, "")
+    .replace(/^\d{10,}-/, "")
     .replace(/[-_]+/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

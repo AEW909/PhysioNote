@@ -16,6 +16,7 @@ function isPublicPath(pathname: string) {
   if (pathname.startsWith("/focus/")) return true;
   if (pathname.startsWith("/focus-content/")) return true;
   if (pathname.startsWith("/focus-control/")) return true;
+  if (pathname === "/api/focus-assets/upload-token") return true;
   if (pathname.startsWith("/api/focus-content")) return true;
   if (pathname.startsWith("/api/health")) return true;
   if (pathname.startsWith("/_next")) return true;

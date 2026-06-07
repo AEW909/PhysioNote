@@ -1561,6 +1561,13 @@ a {
   gap: 18px;
 }
 
+.focus-upload-note {
+  margin: -8px 0 0;
+  color: rgba(244, 240, 255, 0.62);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
 .focus-image-select-field {
   position: relative;
   gap: 10px;

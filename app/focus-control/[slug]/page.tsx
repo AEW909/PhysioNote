@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import {
   addFocusBoardTaskAction,
-  uploadFocusAssetAction,
   updateFocusBoardSettingsAction,
   updateFocusRewardTierAction,
   updateFocusWeeklyRewardAction,
 } from "@/app/focus-control/actions";
+import { FocusAssetUploadForm } from "@/components/focus/focus-asset-upload-form";
 import { FocusControlExistingGoals } from "@/components/focus/focus-control-existing-goals";
 import { FocusImageSelect } from "@/components/focus/focus-image-select";
 import { FocusPullToRefresh } from "@/components/focus/focus-pull-to-refresh";
@@ -177,16 +177,7 @@ export default async function FocusControlPage({ params }: FocusControlPageProps
           summary="Upload extra artwork for challenge stickers and reward ladder images."
           title="Focus image library"
         >
-          <form action={uploadFocusAssetAction} className="focus-control-form">
-            <input name="adminSlug" type="hidden" value={runtime.settings.adminSlug} />
-            <label className="field">
-              <span>Upload image</span>
-              <input accept="image/*" name="asset" type="file" required />
-            </label>
-            <button className="button button-primary" type="submit">
-              Upload image
-            </button>
-          </form>
+          <FocusAssetUploadForm adminSlug={runtime.settings.adminSlug} />
           <div className="focus-asset-grid">
             {assets.map((asset) => (
               <div className="focus-asset-chip" key={`${asset.source}:${asset.value}`}>
