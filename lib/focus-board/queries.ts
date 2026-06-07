@@ -49,6 +49,12 @@ function addMonths(date: Date, months: number) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1));
 }
 
+function addDays(date: Date, days: number) {
+  const copy = new Date(date);
+  copy.setUTCDate(copy.getUTCDate() + days);
+  return copy;
+}
+
 function listMonthWeeks(monthStart: Date) {
   const monthEnd = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 0));
   const firstWeekStart = getWeekStart(monthStart);
@@ -189,11 +195,17 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
     runtime.rewards.find((tier) => monthPoints < tier.minPoints || weeksHit < tier.minWeeksHit) ?? null;
 
   const selectedWeek = weeks.find((week) => week.weekKey === selectedWeekKey) ?? weeks[0];
-  const selectedWeekIndex = weeks.findIndex((week) => week.weekKey === selectedWeekKey);
-  const previousWeekKey = selectedWeekIndex > 0 ? weeks[selectedWeekIndex - 1]?.weekKey ?? null : null;
-  const nextWeekKey = selectedWeekIndex >= 0 && selectedWeekIndex < weeks.length - 1 ? weeks[selectedWeekIndex + 1]?.weekKey ?? null : null;
+  const selectedWeekStart = parseIsoDate(selectedWeekKey) ?? getWeekStart();
+  const previousWeekKey = toIsoDate(addDays(selectedWeekStart, -7));
+  const nextWeekKey = toIsoDate(addDays(selectedWeekStart, 7));
+  const previousWeekMonthKey = selectedWeekKeys.includes(previousWeekKey)
+    ? selectedMonthKey
+    : toIsoDate(getMonthStart(parseIsoDate(previousWeekKey) ?? selectedWeekStart));
+  const nextWeekMonthKey = selectedWeekKeys.includes(nextWeekKey)
+    ? selectedMonthKey
+    : toIsoDate(getMonthStart(parseIsoDate(nextWeekKey) ?? selectedWeekStart));
   const canEditSelectedWeek = selectedWeek ? selectedWeek.weekKey <= currentWeekKey : false;
-  const canGoNextWeek = nextWeekKey ? nextWeekKey <= currentWeekKey : false;
+  const canGoNextWeek = nextWeekKey <= currentWeekKey;
   const previousMonthKey = toIsoDate(addMonths(selectedMonthStart, -1));
   const nextMonthKey = selectedMonthKey < currentMonthKey ? toIsoDate(addMonths(selectedMonthStart, 1)) : null;
   const previousHistoryEndKey = toIsoDate(addMonths(historyEndStart, -6));
@@ -232,7 +244,9 @@ export async function getFocusBoardData(params: FocusBoardParams = {}) {
     navigation: {
       selectedWeekKey,
       previousWeekKey,
+      previousWeekMonthKey,
       nextWeekKey,
+      nextWeekMonthKey,
       canGoNextWeek,
       previousMonthKey,
       nextMonthKey,

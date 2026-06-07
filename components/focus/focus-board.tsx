@@ -246,8 +246,14 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
             <div className="focus-week-nav">
               {board.navigation.previousWeekKey ? (
                 <Link
+                  aria-label="Show previous week"
                   className="focus-nav-arrow"
-                  href={buildWeekHref(board.settings.boardSlug, board.monthKey, board.navigation.previousWeekKey, "week")}
+                  href={buildWeekHref(
+                    board.settings.boardSlug,
+                    board.navigation.previousWeekMonthKey,
+                    board.navigation.previousWeekKey,
+                    "week",
+                  )}
                   scroll={false}
                 >
                   &lt;
@@ -269,8 +275,14 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
               {board.navigation.nextWeekKey ? (
                 board.navigation.canGoNextWeek ? (
                   <Link
+                    aria-label="Show next week"
                     className="focus-nav-arrow"
-                    href={buildWeekHref(board.settings.boardSlug, board.monthKey, board.navigation.nextWeekKey, "week")}
+                    href={buildWeekHref(
+                      board.settings.boardSlug,
+                      board.navigation.nextWeekMonthKey,
+                      board.navigation.nextWeekKey,
+                      "week",
+                    )}
                     scroll={false}
                   >
                     &gt;
