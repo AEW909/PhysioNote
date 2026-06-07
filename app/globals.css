@@ -1562,30 +1562,213 @@ a {
 }
 
 .focus-image-select-field {
+  position: relative;
   gap: 10px;
 }
 
-.focus-image-select-preview {
+.focus-image-select-trigger {
+  position: relative;
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 58px minmax(0, 1fr) 22px;
+  gap: 12px;
   align-items: center;
-  min-height: 64px;
-  padding: 8px;
+  width: 100%;
+  min-height: 76px;
+  padding: 8px 12px 8px 8px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(244, 240, 255, 0.7);
-  font-size: 0.75rem;
-  overflow-wrap: anywhere;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(89, 244, 214, 0.12), transparent 34%),
+    rgba(255, 255, 255, 0.055);
+  color: #f4f0ff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
-.focus-image-select-preview img {
-  width: 54px;
-  height: 54px;
+.focus-image-select-trigger:hover,
+.focus-image-select-trigger:focus-visible,
+.focus-image-select-field-open .focus-image-select-trigger {
+  border-color: rgba(89, 244, 214, 0.62);
+  background:
+    radial-gradient(circle at 10% 20%, rgba(89, 244, 214, 0.18), transparent 38%),
+    rgba(255, 255, 255, 0.075);
+  box-shadow: 0 0 0 3px rgba(89, 244, 214, 0.09), 0 14px 32px rgba(0, 0, 0, 0.22);
+}
+
+.focus-image-select-trigger:active {
+  transform: translateY(1px);
+}
+
+.focus-image-select-trigger-art,
+.focus-image-select-option-art {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(135deg, rgba(0, 245, 212, 0.12), rgba(255, 77, 202, 0.14)),
+    rgba(8, 7, 18, 0.9);
+}
+
+.focus-image-select-trigger-art {
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+}
+
+.focus-image-select-trigger-art img,
+.focus-image-select-option-art img {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.08);
+}
+
+.focus-image-select-trigger-copy,
+.focus-image-select-option-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.focus-image-select-trigger-copy strong,
+.focus-image-select-option-copy strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: 0.88rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-image-select-trigger-copy small,
+.focus-image-select-option-copy small {
+  color: rgba(244, 240, 255, 0.58);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.focus-image-select-chevron {
+  width: 10px;
+  height: 10px;
+  justify-self: center;
+  border-right: 2px solid #59f4d6;
+  border-bottom: 2px solid #59f4d6;
+  transform: translateY(-3px) rotate(45deg);
+  transition: transform 160ms ease;
+}
+
+.focus-image-select-field-open .focus-image-select-chevron {
+  transform: translateY(3px) rotate(225deg);
+}
+
+.focus-image-select-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 120;
+  display: grid;
+  width: min(440px, 100%);
+  max-height: 430px;
+  overflow: hidden;
+  border: 1px solid rgba(89, 244, 214, 0.38);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(0, 245, 212, 0.13), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(255, 77, 202, 0.13), transparent 32%),
+    rgba(10, 9, 20, 0.985);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.56), 0 0 34px rgba(89, 244, 214, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.focus-image-select-menu-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.focus-image-select-menu-head strong {
+  color: #fff;
+  font-family: var(--font-display), sans-serif;
+  font-size: 0.9rem;
+}
+
+.focus-image-select-menu-head span {
+  color: #59f4d6 !important;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.focus-image-select-options {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(89, 244, 214, 0.48) rgba(255, 255, 255, 0.04);
+}
+
+.focus-image-select-option {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 24px;
+  gap: 11px;
+  align-items: center;
+  width: 100%;
+  min-height: 60px;
+  padding: 6px 9px 6px 6px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  background: transparent;
+  color: #f4f0ff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.focus-image-select-option:hover,
+.focus-image-select-option:focus-visible {
+  border-color: rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.07);
+  transform: translateX(2px);
+}
+
+.focus-image-select-option-selected {
+  border-color: rgba(255, 216, 77, 0.34);
+  background: linear-gradient(90deg, rgba(255, 216, 77, 0.12), rgba(255, 77, 202, 0.07));
+}
+
+.focus-image-select-option-art {
+  width: 48px;
+  height: 48px;
+  border-radius: 11px;
+}
+
+.focus-image-select-option-check {
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 999px;
+  color: #0a0914 !important;
+  font-size: 0.72rem;
+  font-weight: 1000;
+}
+
+.focus-image-select-option-selected .focus-image-select-option-check {
+  border-color: #ffd84d;
+  background: #ffd84d;
+  box-shadow: 0 0 16px rgba(255, 216, 77, 0.3);
 }
 
 .focus-asset-grid {
