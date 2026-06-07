@@ -8,6 +8,17 @@ import type { FocusBoardData } from "@/lib/focus-board/queries";
 
 const initialState: UpdateFocusBoardState = {};
 
+const FOCUS_BREAKDOWN_COLORS = [
+  "#00f5d4",
+  "#ffd84d",
+  "#ff4dca",
+  "#8f7cff",
+  "#ff7a59",
+  "#73e06c",
+  "#55a7ff",
+  "#ff8fb8",
+];
+
 type FocusBoardProps = {
   board: FocusBoardData;
   initialView: "week" | "month";
@@ -131,29 +142,35 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
   }, [board.currentReward]);
 
   const totalBreakdownPoints = board.monthlyBreakdown.reduce((sum, item) => sum + item.points, 0);
+  const breakdownItems = useMemo(
+    () =>
+      board.monthlyBreakdown.map((item, index) => ({
+        ...item,
+        color: FOCUS_BREAKDOWN_COLORS[index % FOCUS_BREAKDOWN_COLORS.length],
+      })),
+    [board.monthlyBreakdown],
+  );
   const pieSegments = useMemo(() => {
     if (totalBreakdownPoints === 0) {
       return [];
     }
 
     let cursor = 0;
-    const palette = ["#00f5d4", "#95ff4a", "#ff4dca"];
 
-    return board.monthlyBreakdown
+    return breakdownItems
       .filter((item) => item.points > 0)
-      .map((item, index) => {
+      .map((item) => {
         const share = item.points / totalBreakdownPoints;
         const from = cursor;
         const to = cursor + share * 360;
         cursor = to;
         return {
           ...item,
-          color: palette[index % palette.length],
           from,
           to,
         };
       });
-  }, [board.monthlyBreakdown, totalBreakdownPoints]);
+  }, [breakdownItems, totalBreakdownPoints]);
 
   const donutRadius = 44;
   const donutCircumference = 2 * Math.PI * donutRadius;
@@ -559,13 +576,12 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                   </svg>
                 </div>
                 <div className="focus-breakdown-legend">
-                  {board.monthlyBreakdown.map((item, index) => {
-                    const colors = ["#00f5d4", "#95ff4a", "#ff4dca"];
+                  {breakdownItems.map((item) => {
                     const share = totalBreakdownPoints > 0 ? Math.round((item.points / totalBreakdownPoints) * 100) : 0;
 
                     return (
                       <div className="focus-breakdown-item" key={item.key}>
-                        <span className="focus-breakdown-dot" style={{ background: colors[index % colors.length] }} />
+                        <span className="focus-breakdown-dot" style={{ background: item.color }} />
                         <div>
                           <strong>{item.title}</strong>
                           <p>
