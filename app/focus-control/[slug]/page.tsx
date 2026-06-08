@@ -9,6 +9,7 @@ import { FocusAssetUploadForm } from "@/components/focus/focus-asset-upload-form
 import { FocusControlExistingGoals } from "@/components/focus/focus-control-existing-goals";
 import { FocusImageSelect } from "@/components/focus/focus-image-select";
 import { FocusPullToRefresh } from "@/components/focus/focus-pull-to-refresh";
+import { requireRole } from "@/lib/auth/session";
 import { getFocusAssetOptions } from "@/lib/focus-board/assets";
 import { getFocusBoardRuntimeConfigByAdminSlug } from "@/lib/focus-board/runtime";
 
@@ -51,6 +52,7 @@ function FocusControlSection({
 }
 
 export default async function FocusControlPage({ params }: FocusControlPageProps) {
+  await requireRole(["owner"]);
   const { slug } = await params;
   const [runtime, assets] = await Promise.all([
     getFocusBoardRuntimeConfigByAdminSlug(slug),

@@ -14,8 +14,7 @@ function isPublicPath(pathname: string) {
   if (pathname.startsWith("/auth")) return true;
   if (pathname.startsWith("/consents/acupuncture/")) return true;
   if (pathname.startsWith("/focus/")) return true;
-  if (pathname.startsWith("/focus-content/")) return true;
-  if (pathname.startsWith("/focus-control/")) return true;
+  // Focus APIs return their own JSON 401/403 responses.
   if (pathname === "/api/focus-assets/upload-token") return true;
   if (pathname.startsWith("/api/focus-content")) return true;
   if (pathname.startsWith("/api/health")) return true;
@@ -60,7 +59,8 @@ export async function middleware(request: NextRequest) {
   if (!loggedIn && !isPublic) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
-    redirectUrl.searchParams.set("next", pathname);
+    redirectUrl.search = "";
+    redirectUrl.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(redirectUrl);
   }
 

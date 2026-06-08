@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/login-form";
+import { getSafeNextPath } from "@/lib/auth/redirects";
 
 type LoginPageProps = {
   searchParams: Promise<{ next?: string }>;
@@ -7,7 +8,7 @@ type LoginPageProps = {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
-  const nextPath = params.next ?? "/dashboard";
+  const nextPath = getSafeNextPath(params.next);
 
   return (
     <main className="auth-shell">

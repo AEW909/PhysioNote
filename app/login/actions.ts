@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { getSafeNextPath } from "@/lib/auth/redirects";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getBaseUrl } from "@/lib/site-url";
 
@@ -19,7 +20,7 @@ export async function signInAction(
 ): Promise<ActionState> {
   const email = readString(formData, "email");
   const password = readString(formData, "password");
-  const nextPath = readString(formData, "next") || "/dashboard";
+  const nextPath = getSafeNextPath(readString(formData, "next"));
 
   if (!email || !password) {
     return { error: "Enter your email and password." };

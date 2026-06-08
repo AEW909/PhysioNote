@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getOwnerApiAccess } from "@/lib/auth/api-access";
 import { FOCUS_ASSET_BUCKET, FOCUS_ASSET_FOLDER } from "@/lib/focus-board/asset-constants";
 import { normaliseFocusKey } from "@/lib/focus-board/config";
 import { getFocusBoardRuntimeConfigByAdminSlug } from "@/lib/focus-board/runtime";
@@ -55,6 +56,12 @@ async function ensureFocusAssetBucket() {
 
 export async function POST(request: Request) {
   try {
+    const access = await getOwnerApiAccess();
+
+    if (!access.allowed) {
+      return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
     const input = (await request.json()) as UploadTokenRequest;
     const adminSlug = input.adminSlug?.trim() ?? "";
     const fileName = input.fileName?.trim() ?? "";

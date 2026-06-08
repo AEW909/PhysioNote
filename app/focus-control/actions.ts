@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireRole } from "@/lib/auth/session";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
   FOCUS_BOARD_KEY,
@@ -23,6 +24,7 @@ function getIntValue(formData: FormData, key: string, fallback = 0) {
 }
 
 async function getAdminContext(adminSlug: string) {
+  await requireRole(["owner"]);
   const runtime = await getFocusBoardRuntimeConfigByAdminSlug(adminSlug);
 
   if (!runtime) {

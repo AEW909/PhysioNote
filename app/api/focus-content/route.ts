@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getOwnerApiAccess } from "@/lib/auth/api-access";
 
 const SYSTEM_PROMPT = `You are a specialist copywriter for Skin Revive Aesthetics, a clinical aesthetics practice in Lancaster run by Liona Harris - an HCPC-registered physiotherapist with 15 years clinical experience and 3 years in aesthetics. The practice is based at 3-1-5 Health Club, Mannin Way, Lancaster. The website is skinreviveaesthetics.com.
 
@@ -80,6 +81,12 @@ async function readAnthropicError(response: Response) {
 }
 
 export async function POST(request: Request) {
+  const access = await getOwnerApiAccess();
+
+  if (!access.allowed) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
   if (!apiKey) {
