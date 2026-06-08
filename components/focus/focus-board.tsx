@@ -337,6 +337,7 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                   <FocusImageWithFallback
                     alt={board.weeklyReward.stickerAlt}
                     className="focus-reward-bubble-photo"
+                    expandable
                     fallbackSrc={
                       currentWeek.hitTarget
                         ? board.weeklyReward.unlockedStickerFallbackSrc
@@ -361,6 +362,7 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                     <FocusImageWithFallback
                       alt={task.stickerAlt}
                       className="focus-task-sticker-image"
+                      expandable
                       fallbackSrc={task.stickerFallbackSrc}
                       src={task.stickerSrc}
                     />
@@ -633,6 +635,7 @@ export function FocusBoard({ board, initialView }: FocusBoardProps) {
                       <FocusImageWithFallback
                         alt={tier.stickerAlt}
                         className="focus-liona-reward-photo"
+                        expandable
                         fallbackSrc={unlocked ? tier.unlockedStickerFallbackSrc : tier.lockedStickerFallbackSrc}
                         src={unlocked ? tier.unlockedStickerSrc : tier.lockedStickerSrc}
                       />
