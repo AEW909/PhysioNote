@@ -14,7 +14,9 @@ function isPublicPath(pathname: string) {
   if (pathname.startsWith("/auth")) return true;
   if (pathname.startsWith("/consents/acupuncture/")) return true;
   if (pathname.startsWith("/focus/")) return true;
-  // Focus APIs return their own JSON 401/403 responses.
+  if (pathname.startsWith("/focus-control/")) return true;
+  if (pathname.startsWith("/focus-content/")) return true;
+  // Legacy FocusBoard APIs stay public only so they can return explicit decommission responses.
   if (pathname === "/api/focus-assets/upload-token") return true;
   if (pathname.startsWith("/api/focus-content")) return true;
   if (pathname.startsWith("/api/health")) return true;

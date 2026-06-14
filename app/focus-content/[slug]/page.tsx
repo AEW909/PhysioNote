@@ -1,20 +1,13 @@
-import { notFound } from "next/navigation";
-import { FocusContentLab } from "@/components/focus/focus-content-lab";
-import { requireRole } from "@/lib/auth/session";
-import { getFocusBoardRuntimeConfigByPublicSlug } from "@/lib/focus-board/runtime";
+import { redirectToFocusBoard } from "@/lib/focusboard-redirect";
 
-type FocusContentPageProps = {
+export const dynamic = "force-dynamic";
+
+type LegacyFocusContentPageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function FocusContentPage({ params }: FocusContentPageProps) {
-  await requireRole(["owner"]);
+export default async function LegacyFocusContentPage({ params, searchParams }: LegacyFocusContentPageProps) {
   const { slug } = await params;
-  const runtime = await getFocusBoardRuntimeConfigByPublicSlug(slug);
-
-  if (!runtime) {
-    notFound();
-  }
-
-  return <FocusContentLab slug={slug} />;
+  redirectToFocusBoard(`/focus-content/${slug}`, await searchParams);
 }
