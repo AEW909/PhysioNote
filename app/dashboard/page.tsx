@@ -63,27 +63,6 @@ export default async function DashboardPage() {
             </Link>
           </div>
         </article>
-
-        <article className="card dashboard-focus-card">
-          <div className="dashboard-section-heading">
-            <div>
-              <p className="eyebrow">Today&apos;s focus</p>
-              <h2>Clinic at a glance</h2>
-            </div>
-            <span className="role-badge">{profile.role}</span>
-          </div>
-          <ul className="dashboard-bullet-list">
-            <li>{dashboard.clinicOverview.activeTreatmentPlans} active treatment plans currently in progress.</li>
-            <li>
-              {dashboard.clinicOverview.draftNotes} draft note
-              {dashboard.clinicOverview.draftNotes === 1 ? "" : "s"} currently open across the clinic.
-            </li>
-            <li>
-              {dashboard.clinicOverview.activePatients} active patient record
-              {dashboard.clinicOverview.activePatients === 1 ? "" : "s"} currently in the live clinic directory.
-            </li>
-          </ul>
-        </article>
       </section>
 
       <section className="dashboard-metric-grid">

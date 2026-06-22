@@ -6,8 +6,7 @@ Physio is being rebuilt as a production-oriented physiotherapy platform with sec
 
 - The original browser-only prototype has been archived under `archive/prototype-v1/`
 - Active development is now focused on the new `Next.js + Supabase + Vercel` application scaffold
-- FocusBoard has been extracted into its own standalone repository and deployment
-- Legacy `/focus/*`, `/focus-control/*`, and `/focus-content/*` PhysioNote URLs now redirect to the standalone FocusBoard app
+- FocusBoard has been extracted into its own standalone repository and deployment; PhysioNote no longer ships FocusBoard runtime routes or API shims
 
 ## Shared Supabase Boundary
 
@@ -16,7 +15,7 @@ PhysioNote and FocusBoard still share the same Supabase project for now, but the
 - `auth.*`
 - `public.profiles`
 
-Legacy `public.focus_board_*` tables are deprecated and should be removed only through a controlled cleanup after PhysioNote is redeployed without any FocusBoard runtime dependency.
+FocusBoard-owned tables live in the standalone app's `focusboard` schema. Legacy `public.focus_board_*` tables have been decommissioned from the shared Supabase project.
 
 ## Target Stack
 
@@ -49,11 +48,8 @@ Copy `.env.example` to `.env.local` and provide:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `OPENAI_API_KEY`
-- `FOCUSBOARD_SITE_URL`
 
 `NEXT_PUBLIC_*` values are browser-safe. Everything else is server-only.
-
-`FOCUSBOARD_SITE_URL` should point at the standalone FocusBoard deployment so any legacy PhysioNote links can redirect cleanly.
 
 ## Next Development Steps
 

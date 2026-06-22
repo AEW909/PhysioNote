@@ -8,12 +8,6 @@ type CaseloadCounts = {
   draftNotes: number;
 };
 
-type ClinicOverview = {
-  activePatients: number;
-  activeTreatmentPlans: number;
-  draftNotes: number;
-};
-
 export type DashboardPatientItem = {
   id: string;
   first_name: string;
@@ -48,7 +42,6 @@ export type DashboardDraftNoteItem = {
 
 export type DashboardData = {
   caseload: CaseloadCounts;
-  clinicOverview: ClinicOverview;
   recentPatients: DashboardPatientItem[];
   activePlans: DashboardPlanItem[];
   draftNotes: DashboardDraftNoteItem[];
@@ -77,47 +70,27 @@ export async function getDashboardData(currentUserId: string): Promise<Dashboard
     ),
   );
 
-  const [allActivePlanResult, clinicActivePatientsResult, clinicActivePlansResult, clinicDraftNotesResult, myDraftNotesResult, myDraftNotePreviewResult] =
-    await Promise.all([
-      clinicianPlanIds.length
-        ? supabase
-            .from("treatment_plans")
-            .select("id, title, status, updated_at, first_session_at, patient_id")
-            .eq("is_archived", false)
-            .eq("status", "active")
-            .in("id", clinicianPlanIds)
-        : Promise.resolve({ data: [], error: null }),
-      supabase.from("patients").select("id", { count: "exact", head: true }).eq("is_archived", false),
-      supabase
-        .from("treatment_plans")
-        .select("id", { count: "exact", head: true })
-        .eq("is_archived", false)
-        .eq("status", "active"),
-      supabase.from("clinical_notes").select("id", { count: "exact", head: true }).eq("status", "draft"),
-      supabase.from("clinical_notes").select("id", { count: "exact", head: true }).eq("status", "draft").eq("created_by", currentUserId),
-      supabase
-        .from("clinical_notes")
-        .select("id, title, note_type, updated_at, patient_id")
-        .eq("status", "draft")
-        .eq("created_by", currentUserId)
-        .order("updated_at", { ascending: false })
-        .limit(5),
-    ]);
+  const [allActivePlanResult, myDraftNotesResult, myDraftNotePreviewResult] = await Promise.all([
+    clinicianPlanIds.length
+      ? supabase
+          .from("treatment_plans")
+          .select("id, title, status, updated_at, first_session_at, patient_id")
+          .eq("is_archived", false)
+          .eq("status", "active")
+          .in("id", clinicianPlanIds)
+      : Promise.resolve({ data: [], error: null }),
+    supabase.from("clinical_notes").select("id", { count: "exact", head: true }).eq("status", "draft").eq("created_by", currentUserId),
+    supabase
+      .from("clinical_notes")
+      .select("id, title, note_type, updated_at, patient_id")
+      .eq("status", "draft")
+      .eq("created_by", currentUserId)
+      .order("updated_at", { ascending: false })
+      .limit(5),
+  ]);
 
   if (allActivePlanResult.error) {
     throw new Error(`Failed to load active treatment plans: ${allActivePlanResult.error.message}`);
-  }
-
-  if (clinicActivePatientsResult.error) {
-    throw new Error(`Failed to count clinic patients: ${clinicActivePatientsResult.error.message}`);
-  }
-
-  if (clinicActivePlansResult.error) {
-    throw new Error(`Failed to count clinic treatment plans: ${clinicActivePlansResult.error.message}`);
-  }
-
-  if (clinicDraftNotesResult.error) {
-    throw new Error(`Failed to count clinic draft notes: ${clinicDraftNotesResult.error.message}`);
   }
 
   if (myDraftNotesResult.error) {
@@ -194,11 +167,6 @@ export async function getDashboardData(currentUserId: string): Promise<Dashboard
       activePatients: activePatientIds.length,
       activeTreatmentPlans: allActivePlanRows.length,
       draftNotes: myDraftNotesResult.count ?? 0,
-    },
-    clinicOverview: {
-      activePatients: clinicActivePatientsResult.count ?? 0,
-      activeTreatmentPlans: clinicActivePlansResult.count ?? 0,
-      draftNotes: clinicDraftNotesResult.count ?? 0,
     },
     recentPatients: (recentPatientsResult.data ?? []) as DashboardPatientItem[],
     activePlans: allActivePlanRows.slice(0, 5).map((row) => ({
