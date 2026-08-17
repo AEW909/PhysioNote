@@ -7,6 +7,14 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 type ResetStatus = "checking" | "ready" | "done" | "error";
 
+function getRecoveryErrorMessage(message: string) {
+  if (message.toLowerCase().includes("code verifier")) {
+    return "This reset link cannot be verified in this browser. Request a new reset email from this browser, then open the new link in the same browser.";
+  }
+
+  return message;
+}
+
 export function ResetPasswordForm() {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -32,7 +40,7 @@ export function ResetPasswordForm() {
         if (!active) return;
 
         if (exchangeError) {
-          setError(exchangeError.message);
+          setError(getRecoveryErrorMessage(exchangeError.message));
           setStatus("error");
           return;
         }
@@ -53,7 +61,7 @@ export function ResetPasswordForm() {
         if (!active) return;
 
         if (setSessionError) {
-          setError(setSessionError.message);
+          setError(getRecoveryErrorMessage(setSessionError.message));
           setStatus("error");
           return;
         }
@@ -67,7 +75,7 @@ export function ResetPasswordForm() {
       if (!active) return;
 
       if (sessionError) {
-        setError(sessionError.message);
+        setError(getRecoveryErrorMessage(sessionError.message));
         setStatus("error");
         return;
       }
