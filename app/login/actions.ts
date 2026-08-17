@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { getSafeNextPath } from "@/lib/auth/redirects";
+import { CURRENT_APP_KEY } from "@/lib/auth/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getBaseUrl } from "@/lib/site-url";
 
@@ -27,13 +28,34 @@ export async function signInAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithPassword({
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (!user) {
+    await supabase.auth.signOut();
+    redirect("/no-access");
+  }
+
+  const { data: membership, error: membershipError } = await supabase
+    .from("app_memberships")
+    .select("user_id")
+    .eq("user_id", user.id)
+    .eq("app_key", CURRENT_APP_KEY)
+    .eq("active", true)
+    .maybeSingle();
+
+  if (membershipError || !membership) {
+    await supabase.auth.signOut();
+    redirect("/no-access");
   }
 
   redirect(nextPath);

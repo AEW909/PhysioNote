@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import type { StaffProfile, StaffRole } from "@/lib/auth/types";
+import type { AppKey, StaffProfile, StaffRole } from "@/lib/auth/types";
+
+export const CURRENT_APP_KEY: AppKey = "physio";
 
 export async function getSessionUser() {
   const supabase = await createSupabaseServerClient();
@@ -28,25 +30,49 @@ export async function getCurrentProfile(): Promise<StaffProfile | null> {
   if (!user) return null;
 
   const supabase = await createSupabaseServerClient();
+  const { data: membership, error: membershipError } = await supabase
+    .from("app_memberships")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("app_key", CURRENT_APP_KEY)
+    .eq("active", true)
+    .maybeSingle();
+
+  if (!membership) {
+    if (membershipError) {
+      console.error("App membership lookup failed:", membershipError);
+    }
+
+    return null;
+  }
+
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("id, email, full_name, role")
+    .select("id, email, full_name")
     .eq("id", user.id)
     .maybeSingle();
 
   if (profile) {
-    return profile satisfies StaffProfile;
+    return {
+      ...profile,
+      role: membership.role,
+      app_key: CURRENT_APP_KEY,
+    } satisfies StaffProfile;
   }
 
   const admin = createSupabaseAdminClient();
   const { data: adminProfile } = await admin
     .from("profiles")
-    .select("id, email, full_name, role")
+    .select("id, email, full_name")
     .eq("id", user.id)
     .maybeSingle();
 
   if (adminProfile) {
-    return adminProfile satisfies StaffProfile;
+    return {
+      ...adminProfile,
+      role: membership.role,
+      app_key: CURRENT_APP_KEY,
+    } satisfies StaffProfile;
   }
 
   if (error) {
@@ -61,7 +87,7 @@ export async function requireRole(allowedRoles: StaffRole[]) {
   const profile = await getCurrentProfile();
 
   if (!profile || !allowedRoles.includes(profile.role)) {
-    redirect("/dashboard");
+    redirect("/no-access");
   }
 
   return profile satisfies StaffProfile;

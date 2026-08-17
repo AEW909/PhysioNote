@@ -7,7 +7,7 @@ type CookieToSet = {
   options?: Parameters<NextResponse["cookies"]["set"]>[2];
 };
 
-const PUBLIC_PATHS = new Set(["/", "/login", "/forgot-password", "/reset-password"]);
+const PUBLIC_PATHS = new Set(["/", "/login", "/forgot-password", "/reset-password", "/no-access"]);
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.has(pathname)) return true;
