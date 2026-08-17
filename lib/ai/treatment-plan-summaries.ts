@@ -1,15 +1,21 @@
 import { z } from "zod";
 import { getServerEnv } from "@/lib/env";
+import type { NoteType } from "@/lib/notes/types";
 
 const aiTreatmentPlanSummarySchema = z.object({
   presentingProblemSummary: z.string().trim().min(1),
   goalsSummary: z.string().trim().min(1),
   progressSummary: z.string().trim().min(1),
+  overallFindings: z.string().trim().min(1),
 });
 
 type GenerateTreatmentPlanSummariesInput = {
   planTitle: string;
-  noteContent: Record<string, unknown>;
+  sessionNotes: Array<{
+    noteType: NoteType;
+    createdAt?: string | null;
+    summary: string;
+  }>;
 };
 
 type ResponsesApiPayload = {
@@ -22,151 +28,6 @@ type ResponsesApiPayload = {
     }>;
   }>;
 };
-
-function asRecord(value: unknown) {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-function asString(value: unknown) {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function asStringArray(value: unknown) {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
-
-function asBoolean(value: unknown) {
-  return value === true;
-}
-
-function toLabelCase(value: string) {
-  return value
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
-}
-
-function formatCheckedFlags(source: Record<string, unknown>, labels: Record<string, string>) {
-  return Object.entries(labels)
-    .filter(([key]) => asBoolean(source[key]))
-    .map(([, label]) => label);
-}
-
-function getLegacyGoalsFromModalities(source: Record<string, unknown>) {
-  return {
-    reduce_pain: source.reduce_pain,
-    improve_function: source.improve_function,
-    increase_rom: source.increase_rom,
-    return_to_work: source.return_to_work,
-    return_to_sport_or_hobby: source.return_to_sport_or_hobby,
-  };
-}
-
-function buildInitialAssessmentSummary(noteContent: Record<string, unknown>) {
-  const history = asRecord(noteContent.history);
-  const medicalHistory = asRecord(noteContent.medical_history);
-  const specialQuestions = asRecord(noteContent.special_questions);
-  const cervicalQuestions = asRecord(noteContent.cervical_questions);
-  const objective = asRecord(noteContent.objective);
-  const impression = asRecord(noteContent.impression);
-  const plan = asRecord(noteContent.plan);
-  const modalities = asRecord(plan.modalities);
-  const goals = Object.keys(asRecord(plan.goals)).length ? asRecord(plan.goals) : getLegacyGoalsFromModalities(modalities);
-
-  const redFlags = formatCheckedFlags(specialQuestions, {
-    weight_loss: "Weight loss",
-    night_sweats: "Night sweats",
-    poor_appetite: "Poor appetite",
-    headache: "Headache",
-    nausea: "Nausea",
-    dizziness: "Dizziness",
-    pins_and_needles_intermittent: "Pins and needles intermittent",
-    pins_and_needles_constant: "Pins and needles constant",
-    numbness: "Numbness",
-    cough_sneeze: "Cough / sneeze aggravation",
-    bladder_bowel: "Bladder / bowel change",
-    saddle_anaesthesia: "Saddle anaesthesia",
-    bilateral_symptoms: "Bilateral symptoms",
-    constant_pain: "Constant pain",
-    night_pain: "Night pain",
-    tsp_pain: "Thoracic spine pain",
-    malaise: "Malaise",
-    symptoms_worsening: "Symptoms worsening",
-  });
-
-  const cervicalFlags = formatCheckedFlags(cervicalQuestions, {
-    face_lips_tongue: "Face / lips / tongue symptoms",
-    dexterity: "Dexterity change",
-    eye_problems: "Eye problems",
-    metal_taste: "Metal taste",
-    dysphagia: "Dysphagia",
-    clumsiness: "Clumsiness",
-    head_support: "Needs head support",
-    gait_disturbance: "Gait disturbance",
-    clunking: "Clunking",
-  });
-
-  const goalsChosen = formatCheckedFlags(goals, {
-    reduce_pain: "Reduce pain",
-    improve_function: "Improve function",
-    increase_rom: "Increase ROM",
-    return_to_work: "Return to work",
-    return_to_sport_or_hobby: "Return to sport / hobby",
-  });
-
-  const modalitiesChosen = formatCheckedFlags(modalities, {
-    manual: "Manual therapy",
-    electrotherapy: "Electrotherapy",
-    ultrasound: "Ultrasound",
-    acupuncture: "Acupuncture",
-    exercises_self_manage: "Exercises / self-management",
-    advice: "Advice",
-  });
-
-  const bloodPressure = asStringArray(medicalHistory.blood_pressure).map(toLabelCase);
-  const diabetes = asStringArray(medicalHistory.diabetes).map(toLabelCase);
-
-  return [
-    `Treatment plan label: ${asString(noteContent.plan_title) || "Not supplied"}`,
-    `HPC: ${asString(history.hpc) || "Not recorded"}`,
-    `Onset pattern: ${asStringArray(history.onset_pattern).join(", ") || "Not recorded"}`,
-    `Investigations: ${asStringArray(history.investigations).join(", ") || "Not recorded"}`,
-    `Symptom features: ${asStringArray(history.symptom_features).join(", ") || "Not recorded"}`,
-    `Pain rating (NPRS): Best ${asString(history.nprs_best) || "not recorded"}, Current ${asString(history.nprs_current) || asString(history.nprs) || "not recorded"}, Worst ${asString(history.nprs_worst) || "not recorded"}`,
-    `Social history: ${asString(history.social_history) || "Not recorded"}`,
-    `Diurnal pattern: ${asString(history.diurnal_pattern) || "Not recorded"}`,
-    `Aggravating factors: ${asString(history.aggravating_factors) || "Not recorded"}`,
-    `Easing factors: ${asString(history.easing_factors) || "Not recorded"}`,
-    `Past medical history: ${asStringArray(medicalHistory.past_medical_history).join(", ") || "Not recorded"}`,
-    `Blood pressure flags: ${bloodPressure.join(", ") || "Not recorded"}`,
-    `Diabetes flags: ${diabetes.join(", ") || "Not recorded"}`,
-    `No significant history selected: ${asBoolean(medicalHistory.no_significant_history) ? "Yes" : "No"}`,
-    `Medication history: ${asString(medicalHistory.medication_history) || "Not recorded"}`,
-    `Steroids: ${asBoolean(medicalHistory.uses_steroids) ? "Yes" : "No"}`,
-    `Anticoagulants: ${asBoolean(medicalHistory.uses_anticoagulants) ? "Yes" : "No"}`,
-    `Past medical history details: ${asString(medicalHistory.past_medical_history_details) || "Not recorded"}`,
-    `Past operations: ${asString(medicalHistory.past_operations) || "Not recorded"}`,
-    `Special questions flagged: ${redFlags.join(", ") || "None recorded"}`,
-    `Cervical-specific flags: ${cervicalFlags.join(", ") || "None recorded"}`,
-    `Objective posture: ${asString(objective.posture) || "Not recorded"}`,
-    `Objective ROM: ${asString(objective.rom) || "Not recorded"}`,
-    `Associated joints ROM: ${asString(objective.associated_joints_rom) || "Not recorded"}`,
-    `ULTT: ${asString(objective.ultt) || "Not recorded"}`,
-    `Special tests: ${asString(objective.special_tests) || "Not recorded"}`,
-    `Palpation: ${asString(objective.palpation) || "Not recorded"}`,
-    `Neurological screen: ${asString(objective.neuro_screen) || "Not recorded"}`,
-    `Other objective findings: ${asString(objective.other) || "Not recorded"}`,
-    `Clinical opinion: ${asString(impression.opinion) || "Not recorded"}`,
-    `Consent to treatment: ${asBoolean(impression.consent_to_treatment) ? "Yes" : "No / not recorded"}`,
-    `Problems and goals from clinician: ${asString(plan.problems_and_goals) || "Not recorded"}`,
-    `Outcome measure: ${asString(plan.measure) || "Not recorded"}`,
-    `Timeframe in weeks: ${asString(plan.timeframe_weeks) || "Not recorded"}`,
-    `Goals selected: ${goalsChosen.join(", ") || "None recorded"}`,
-    `Modalities selected: ${modalitiesChosen.join(", ") || "None recorded"}`,
-    `Actual treatment given: ${asString(plan.actual_treatment_given) || "Not recorded"}`,
-  ].join("\n");
-}
 
 function extractStructuredOutputText(payload: ResponsesApiPayload) {
   if (typeof payload.output_text === "string" && payload.output_text.trim()) {
@@ -184,6 +45,27 @@ function extractStructuredOutputText(payload: ResponsesApiPayload) {
   return null;
 }
 
+function buildSessionTimeline(
+  sessionNotes: Array<{
+    noteType: NoteType;
+    createdAt?: string | null;
+    summary: string;
+  }>,
+) {
+  return sessionNotes
+    .map((note, index) => {
+      const ordinal = index + 1;
+      const dateLabel = note.createdAt ? new Date(note.createdAt).toISOString() : "Date not recorded";
+      return [
+        `Session ${ordinal}`,
+        `Type: ${note.noteType.replace("_", " ")}`,
+        `Recorded: ${dateLabel}`,
+        note.summary,
+      ].join("\n");
+    })
+    .join("\n\n---\n\n");
+}
+
 export async function generateTreatmentPlanSummaries(input: GenerateTreatmentPlanSummariesInput) {
   const env = getServerEnv();
   const schema = {
@@ -192,18 +74,22 @@ export async function generateTreatmentPlanSummaries(input: GenerateTreatmentPla
     properties: {
       presentingProblemSummary: {
         type: "string",
-        description: "A concise clinician-facing summary of the presenting problem and current working impression.",
+        description: "An internal clinician-facing note on the presenting complaint, working diagnosis, and key clinical context.",
       },
       goalsSummary: {
         type: "string",
-        description: "A concise clinician-facing summary of the treatment goals and intended outcomes.",
+        description: "A clinician-facing note of treatment aims, rehabilitation priorities, and intended clinical outcomes.",
       },
       progressSummary: {
         type: "string",
-        description: "A short starter summary for future follow-ups describing the current baseline and focus.",
+        description: "An internal progress note summarising response across sessions, current trend, and any barriers or changes.",
+      },
+      overallFindings: {
+        type: "string",
+        description: "A concise medical-style internal summary of clinically relevant findings, treatment delivered, and current status.",
       },
     },
-    required: ["presentingProblemSummary", "goalsSummary", "progressSummary"],
+    required: ["presentingProblemSummary", "goalsSummary", "progressSummary", "overallFindings"],
   };
 
   const response = await fetch("https://api.openai.com/v1/responses", {
@@ -215,7 +101,7 @@ export async function generateTreatmentPlanSummaries(input: GenerateTreatmentPla
     body: JSON.stringify({
       model: "gpt-4o-mini",
       instructions:
-        "You are assisting a physiotherapy clinic with clinician-drafted treatment plan summaries. Use only the supplied initial assessment content. Keep wording concise, clinically useful, and neutral. Do not invent diagnoses, imaging results, red flags, or progress that are not supported by the note. Do not mention AI or uncertainty unless the record is genuinely too sparse.",
+        "You are assisting a physiotherapy clinic with internal treatment plan summaries. Use only the supplied note content. Write in concise UK clinical English and favour medical terminology where appropriate. The output is for internal clinician use, so it can read like brief note-writing rather than patient-facing prose. Track progress across the timeline, noting improvement, plateau, regression, response to treatment, and any active management focus. Do not invent diagnoses, imaging, red flags, or objective findings that are not supported by the notes.",
       input: [
         {
           role: "user",
@@ -223,24 +109,23 @@ export async function generateTreatmentPlanSummaries(input: GenerateTreatmentPla
             {
               type: "input_text",
               text: [
-                `Treatment plan name: ${input.planTitle}`,
+                `Treatment plan: ${input.planTitle}`,
                 "",
-                "Create three short clinician-facing summaries:",
+                "Create four internal clinician-facing fields:",
                 "1. Presenting problem summary",
                 "2. Goals summary",
-                "3. Progress summary starter for future follow-ups",
+                "3. Progress summary",
+                "4. Overall findings",
                 "",
                 "Requirements:",
-                "- Use UK clinical English.",
-                "- Keep each field to roughly 1-3 sentences.",
-                "- Focus on the current problem episode only.",
-                "- If the source note is thin, stay conservative and say what is currently being assessed or targeted.",
+                "- Use the whole note timeline, not just the first session.",
+                "- Reflect how the patient has progressed over time where this is documented.",
+                "- Keep each field to roughly 2-5 sentences.",
+                "- Use note-like, medically literate phrasing suitable for internal records.",
+                "- If progress is mixed or unclear, say so conservatively.",
                 "",
-                "Initial assessment note:",
-                buildInitialAssessmentSummary({
-                  ...input.noteContent,
-                  plan_title: input.planTitle,
-                }),
+                "Treatment plan note timeline:",
+                buildSessionTimeline(input.sessionNotes),
               ].join("\n"),
             },
           ],

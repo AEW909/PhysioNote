@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getCurrentProfile, requireRole, requireUser } from "@/lib/auth/session";
 import { insertAuditLog } from "@/lib/audit/insert-audit-log";
 import { generateTreatmentPlanSummaries } from "@/lib/ai/treatment-plan-summaries";
+import { summarizeCurrentNote } from "@/lib/notes/summary";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type CreateTreatmentPlanState = {
@@ -214,6 +215,7 @@ export async function deleteTreatmentPlanAction(formData: FormData) {
   await requireRole(["owner"]);
   const user = await requireUser();
   const profile = await getCurrentProfile();
+
   const planId = getValue(formData, "planId");
   const patientId = getValue(formData, "patientId");
 
@@ -281,6 +283,58 @@ export async function deleteTreatmentPlanAction(formData: FormData) {
   redirect(`/patients/${patientId}`);
 }
 
+export async function dischargeTreatmentPlanAction(formData: FormData) {
+  const user = await requireUser();
+  const planId = getValue(formData, "planId");
+  const patientId = getValue(formData, "patientId");
+
+  if (!planId || !patientId) {
+    throw new Error("Treatment plan ID or patient ID is missing.");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: plan, error: fetchError } = await supabase
+    .from("treatment_plans")
+    .select("id, status, completed_at")
+    .eq("id", planId)
+    .single();
+
+  if (fetchError || !plan) {
+    throw new Error(fetchError?.message ?? "Failed to load treatment plan before discharge.");
+  }
+
+  const completedAt = new Date().toISOString();
+  const { error } = await supabase
+    .from("treatment_plans")
+    .update({
+      status: "completed",
+      completed_at: completedAt,
+      updated_at: completedAt,
+    })
+    .eq("id", planId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await insertAuditLog({
+    action: "discharge_treatment_plan",
+    actorProfileId: user.id,
+    beforeState: {
+      status: plan.status,
+      completed_at: plan.completed_at,
+    },
+    afterState: {
+      status: "completed",
+      completed_at: completedAt,
+    },
+    entityId: planId,
+    entityType: "treatment_plan",
+  });
+
+  redirect(`/patients/${patientId}`);
+}
+
 export async function generateTreatmentPlanSummariesAction(
   _prevState: CreateTreatmentPlanState,
   formData: FormData,
@@ -311,12 +365,6 @@ export async function generateTreatmentPlanSummariesAction(
     };
   }
 
-  if (note.note_type !== "initial_assessment") {
-    return {
-      error: "AI plan summaries can only be generated from an initial assessment.",
-    };
-  }
-
   if (!note.treatment_plan_id || note.treatment_plan_id !== parsed.data.planId) {
     return {
       error: "This note is not linked to the selected treatment plan.",
@@ -343,7 +391,7 @@ export async function generateTreatmentPlanSummariesAction(
 
   const { data: plan, error: planError } = await supabase
     .from("treatment_plans")
-    .select("id, title, presenting_problem_summary, goals_summary, progress_summary")
+    .select("id, title, presenting_problem_summary, goals_summary, progress_summary, overall_findings")
     .eq("id", parsed.data.planId)
     .maybeSingle();
 
@@ -356,24 +404,33 @@ export async function generateTreatmentPlanSummariesAction(
   try {
     const summaries = await generateTreatmentPlanSummaries({
       planTitle: plan.title,
-      noteContent:
-        version.content && typeof version.content === "object" && !Array.isArray(version.content)
-          ? (version.content as Record<string, unknown>)
-          : {},
+      sessionNotes: [
+        {
+          noteType: note.note_type,
+          summary: summarizeCurrentNote(
+            note.note_type,
+            version.content && typeof version.content === "object" && !Array.isArray(version.content)
+              ? (version.content as Record<string, unknown>)
+              : {},
+          ),
+        },
+      ],
     });
 
     const beforeState = {
       presenting_problem_summary: plan.presenting_problem_summary,
       goals_summary: plan.goals_summary,
       progress_summary: plan.progress_summary,
+      overall_findings: plan.overall_findings,
     };
 
     const afterState = {
       presenting_problem_summary: summaries.presentingProblemSummary,
       goals_summary: summaries.goalsSummary,
       progress_summary: summaries.progressSummary,
+      overall_findings: summaries.overallFindings,
       source_note_id: note.id,
-      source: "initial_assessment_ai_summary",
+      source: "manual_note_summary_generation",
     };
 
     const { error: updateError } = await supabase
@@ -382,6 +439,7 @@ export async function generateTreatmentPlanSummariesAction(
         presenting_problem_summary: summaries.presentingProblemSummary,
         goals_summary: summaries.goalsSummary,
         progress_summary: summaries.progressSummary,
+        overall_findings: summaries.overallFindings,
       })
       .eq("id", parsed.data.planId);
 

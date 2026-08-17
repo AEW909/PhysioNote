@@ -361,6 +361,9 @@ export function NoteView({ note, patient }: NoteViewProps) {
   const [hasMounted, setHasMounted] = useState(false);
   const [pendingIntent, setPendingIntent] = useState<string | null>(null);
   const isSubmittingRef = useRef(false);
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const autosaveButtonRef = useRef<HTMLButtonElement | null>(null);
+  const autosaveTimerRef = useRef<number | null>(null);
   const content = asRecord(note.current_version?.content ?? {});
   const history = asRecord(content.history);
   const medicalHistory = asRecord(content.medical_history);
@@ -418,6 +421,7 @@ export function NoteView({ note, patient }: NoteViewProps) {
   const followUpNprsBest = asString(content.nprs_best);
   const followUpNprsCurrent = asString(content.nprs_current) || asString(content.nprs);
   const followUpNprsWorst = asString(content.nprs_worst);
+  const autosaveEligible = note.status === "draft";
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLFormElement>) {
     if (event.key !== "Enter") return;
@@ -477,7 +481,7 @@ export function NoteView({ note, patient }: NoteViewProps) {
   useEffect(() => {
     if (!pending) {
       isSubmittingRef.current = false;
-      setPendingIntent(null);
+      setPendingIntent((current) => (current === "autosave_draft" ? null : current));
     }
   }, [pending]);
 
@@ -486,6 +490,30 @@ export function NoteView({ note, patient }: NoteViewProps) {
       setErrorModalMessage(state.error);
     }
   }, [state.error]);
+
+  useEffect(() => {
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+
+    if (!autosaveEligible || !isDirty || pending || pendingNavigationHref) {
+      return;
+    }
+
+    autosaveTimerRef.current = window.setTimeout(() => {
+      if (!autosaveButtonRef.current || !formRef.current) return;
+      setPendingIntent("autosave_draft");
+      formRef.current.requestSubmit(autosaveButtonRef.current);
+    }, 1500);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        window.clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+    };
+  }, [autosaveEligible, isDirty, pending, pendingNavigationHref]);
 
   useEffect(() => {
     setHasMounted(true);
@@ -587,6 +615,7 @@ export function NoteView({ note, patient }: NoteViewProps) {
       <form
         action={formAction}
         className="note-form"
+        ref={formRef}
         onChange={markDirty}
         onInput={markDirty}
         onKeyDown={handleKeyDown}
@@ -618,22 +647,17 @@ export function NoteView({ note, patient }: NoteViewProps) {
             >
               {pending && pendingIntent === "complete_note" ? "Completing note..." : "Complete note"}
             </button>
-            {note.note_type === "follow_up" ? (
-              <button
-                className="button button-management"
-                disabled={pending}
-                name="submitIntent"
-                onClick={() => handleIntentClick("complete_and_discharge")}
-                type="submit"
-                value="complete_and_discharge"
-              >
-                {pending && pendingIntent === "complete_and_discharge"
-                  ? "Completing + preparing discharge..."
-                  : "Complete + Discharge patient"}
-              </button>
-            ) : null}
-            {state.success ? <p className="form-success">{state.success}</p> : null}
+            {state.success && state.success !== "Draft saved." ? <p className="form-success">{state.success}</p> : null}
             {state.error ? <p className="form-error">{state.error}</p> : null}
+            {autosaveEligible ? (
+              <p className="note-autosave-hint">
+                {pending && pendingIntent === "autosave_draft"
+                  ? "Autosaving..."
+                  : state.success === "Draft saved."
+                    ? "Auto-saved"
+                    : "Draft auto-saves while you type"}
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -1059,56 +1083,6 @@ export function NoteView({ note, patient }: NoteViewProps) {
         </>
       ) : null}
 
-      {note.note_type === "discharge" ? (
-        <>
-          <SectionJumpNav
-            links={[
-              { href: "#discharge-summary", label: "Discharge note" },
-              { href: "#note-actions", label: "Save actions" },
-            ]}
-          />
-          <div className="note-grid note-grid-single">
-          <section className="card stack note-card note-card-wide" id="discharge-summary">
-            <h2>Discharge summary</h2>
-            <div className="note-form-grid">
-              <NoteTextarea
-                autoFocus
-                label="Presenting problem summary"
-                name="presenting_problem_summary"
-                defaultValue={asString(content.presenting_problem_summary)}
-                rows={4}
-              />
-              <NoteTextarea
-                label="Treatment course summary"
-                name="treatment_course_summary"
-                defaultValue={asString(content.treatment_course_summary)}
-                rows={4}
-              />
-              <NoteTextarea label="Outcome" name="outcome" defaultValue={asString(content.outcome)} rows={4} />
-              <NoteTextarea
-                label="Final functional status"
-                name="final_functional_status"
-                defaultValue={asString(content.final_functional_status)}
-                rows={4}
-              />
-              <NoteTextarea
-                label="Advice on discharge"
-                name="advice_on_discharge"
-                defaultValue={asString(content.advice_on_discharge)}
-                rows={4}
-              />
-              <NoteTextarea
-                label="Follow-up recommendations"
-                name="follow_up_recommendations"
-                defaultValue={asString(content.follow_up_recommendations)}
-                rows={4}
-              />
-            </div>
-          </section>
-          </div>
-        </>
-      ) : null}
-
         <div className="workspace-actions note-form-footer note-form-footer-sticky" id="note-actions">
           <button
             className="button button-secondary"
@@ -1130,35 +1104,29 @@ export function NoteView({ note, patient }: NoteViewProps) {
           >
             {pending && pendingIntent === "complete_note" ? "Completing note..." : "Complete note"}
           </button>
-          {note.note_type === "initial_assessment" ? (
-            <button
-              className="button button-primary"
-              disabled={pending}
-              name="submitIntent"
-              onClick={() => handleIntentClick("complete_and_generate_plan_summaries")}
-              type="submit"
-              value="complete_and_generate_plan_summaries"
-            >
-              {pending && pendingIntent === "complete_and_generate_plan_summaries"
-                ? "Completing + generating AI summaries..."
-                : "Complete + Generate AI"}
-            </button>
+          <button
+            aria-hidden="true"
+            className="sr-only"
+            disabled={pending}
+            name="submitIntent"
+            ref={autosaveButtonRef}
+            tabIndex={-1}
+            type="submit"
+            value="save_draft"
+          >
+            Save draft
+          </button>
+          {state.success && state.success !== "Draft saved." ? <p className="form-success">{state.success}</p> : null}
+          {state.error ? <p className="form-error">{state.error}</p> : null}
+          {autosaveEligible ? (
+            <p className="note-autosave-hint">
+              {pending && pendingIntent === "autosave_draft"
+                ? "Autosaving..."
+                : state.success === "Draft saved."
+                  ? "Auto-saved"
+                  : "Draft auto-saves while you type"}
+            </p>
           ) : null}
-          {note.note_type === "follow_up" ? (
-            <button
-              className="button button-management"
-              disabled={pending}
-              name="submitIntent"
-              onClick={() => handleIntentClick("complete_and_discharge")}
-              type="submit"
-              value="complete_and_discharge"
-            >
-              {pending && pendingIntent === "complete_and_discharge"
-                ? "Completing + preparing discharge..."
-                : "Complete + Discharge patient"}
-            </button>
-          ) : null}
-          {state.success ? <p className="form-success">{state.success}</p> : null}
         </div>
       </form>
     </>

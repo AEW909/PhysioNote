@@ -25,7 +25,6 @@ export function CreateNoteForm({ appointmentId, patientId }: CreateNoteFormProps
         <select className="select-field" defaultValue="follow_up" name="noteType">
           <option value="initial_assessment">Initial assessment</option>
           <option value="follow_up">Follow-up</option>
-          <option value="discharge">Discharge</option>
         </select>
       </label>
 

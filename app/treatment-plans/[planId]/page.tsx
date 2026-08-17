@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
+import { dischargeTreatmentPlanAction } from "@/app/treatment-plans/actions";
 import { PlanSessionList } from "@/components/treatment-plans/treatment-plan-list";
 import { TreatmentPlanArchiveToggleForm } from "@/components/treatment-plans/treatment-plan-archive-toggle-form";
 import { TreatmentPlanDeleteForm } from "@/components/treatment-plans/treatment-plan-delete-form";
@@ -60,6 +61,15 @@ export default async function TreatmentPlanDetailPage({ params }: TreatmentPlanD
               {plan.sessions.length ? "Add follow-up" : "Start initial assessment"}
             </Link>
           ) : null}
+          {!plan.is_archived && plan.status !== "completed" && plan.sessions.length > 0 ? (
+            <form action={dischargeTreatmentPlanAction}>
+              <input name="planId" type="hidden" value={plan.id} />
+              <input name="patientId" type="hidden" value={patient.id} />
+              <button className="button button-management" type="submit">
+                Discharge patient
+              </button>
+            </form>
+          ) : null}
         </div>
         <div className="workspace-actions">
           {profile.role === "owner" || profile.role === "admin" ? (
@@ -104,19 +114,19 @@ export default async function TreatmentPlanDetailPage({ params }: TreatmentPlanD
           <dl className="detail-list">
             <div>
               <dt>Presenting problem summary</dt>
-              <dd>{plan.presenting_problem_summary || "Blank for now. This can be AI-assisted later from the initial assessment."}</dd>
+              <dd>{plan.presenting_problem_summary || "Blank for now. This is auto-generated from final session notes."}</dd>
             </div>
             <div>
               <dt>Goals summary</dt>
-              <dd>{plan.goals_summary || "Blank for now. This can be AI-assisted later from the initial assessment."}</dd>
+              <dd>{plan.goals_summary || "Blank for now. This is auto-generated from final session notes."}</dd>
             </div>
             <div>
               <dt>Progress summary</dt>
-              <dd>{plan.progress_summary || "Blank for now. This can be updated across follow-up sessions later."}</dd>
+              <dd>{plan.progress_summary || "Blank for now. This is auto-generated from the treatment plan timeline."}</dd>
             </div>
             <div>
               <dt>Overall findings</dt>
-              <dd>{plan.overall_findings || "Blank for now. This can be completed at discharge."}</dd>
+              <dd>{plan.overall_findings || "Blank for now. This is auto-generated from final session notes."}</dd>
             </div>
           </dl>
         </section>

@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { generateFollowUpSupport } from "@/lib/ai/follow-up-support";
 import { generateTreatmentPlanSummaries } from "@/lib/ai/treatment-plan-summaries";
 import { insertAuditLog } from "@/lib/audit/insert-audit-log";
+import { summarizeCurrentNote } from "@/lib/notes/summary";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createNoteTemplateContent, NOTE_TYPE_LABELS } from "@/lib/notes/templates";
 import type { NoteType } from "@/lib/notes/types";
@@ -33,7 +33,7 @@ export type GenerateFollowUpSupportState = {
 const createNoteSchema = z.object({
   patientId: z.string().uuid(),
   appointmentId: z.string().uuid(),
-  noteType: z.enum(["initial_assessment", "follow_up", "discharge"]),
+  noteType: z.enum(["initial_assessment", "follow_up"]),
 });
 
 function getValue(formData: FormData, key: string) {
@@ -200,11 +200,9 @@ export async function createNoteAction(
 
 const updateNoteSchema = z.object({
   noteId: z.string().uuid(),
-  noteType: z.enum(["initial_assessment", "follow_up", "discharge"]),
+  noteType: z.enum(["initial_assessment", "follow_up"]),
   treatmentPlanId: z.string().uuid().optional(),
-  submitIntent: z
-    .enum(["save_draft", "complete_note", "complete_and_discharge", "complete_and_generate_plan_summaries"])
-    .default("complete_note"),
+  submitIntent: z.enum(["save_draft", "complete_note"]).default("complete_note"),
 });
 
 const generateFollowUpSupportSchema = z.object({
@@ -312,6 +310,115 @@ function buildNoteContent(noteType: NoteType, formData: FormData) {
   };
 }
 
+async function regenerateTreatmentPlanAiSummary(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userId: string,
+  treatmentPlanId: string,
+) {
+  const { data: plan, error: planError } = await supabase
+    .from("treatment_plans")
+    .select("id, title, presenting_problem_summary, goals_summary, progress_summary, overall_findings")
+    .eq("id", treatmentPlanId)
+    .maybeSingle();
+
+  if (planError || !plan) {
+    throw new Error(planError?.message ?? "Unable to load the treatment plan before AI summary generation.");
+  }
+
+  const { data: notes, error: notesError } = await supabase
+    .from("clinical_notes")
+    .select("id, note_type, current_version_id, status, created_at")
+    .eq("treatment_plan_id", treatmentPlanId)
+    .eq("status", "final")
+    .in("note_type", ["initial_assessment", "follow_up"])
+    .order("created_at", { ascending: true });
+
+  if (notesError) {
+    throw new Error(notesError.message);
+  }
+
+  const finalNotes = (notes ?? []).filter((note) => note.current_version_id);
+
+  if (!finalNotes.length) {
+    return;
+  }
+
+  const versionIds = finalNotes
+    .map((note) => note.current_version_id)
+    .filter((value): value is string => typeof value === "string");
+
+  const { data: versions, error: versionsError } = await supabase
+    .from("note_versions")
+    .select("id, content")
+    .in("id", versionIds);
+
+  if (versionsError) {
+    throw new Error(versionsError.message);
+  }
+
+  const versionMap = new Map(
+    (versions ?? []).map((version) => [
+      version.id,
+      version.content && typeof version.content === "object" && !Array.isArray(version.content)
+        ? (version.content as Record<string, unknown>)
+        : {},
+    ]),
+  );
+
+  const sessionNotes = finalNotes.map((note) => ({
+    noteType: note.note_type as NoteType,
+    createdAt: note.created_at,
+    summary: summarizeCurrentNote(
+      note.note_type as NoteType,
+      versionMap.get(note.current_version_id as string) ?? {},
+    ),
+  }));
+
+  const summaries = await generateTreatmentPlanSummaries({
+    planTitle: plan.title,
+    sessionNotes,
+  });
+
+  const beforeState = {
+    presenting_problem_summary: plan.presenting_problem_summary,
+    goals_summary: plan.goals_summary,
+    progress_summary: plan.progress_summary,
+    overall_findings: plan.overall_findings,
+  };
+
+  const afterState = {
+    presenting_problem_summary: summaries.presentingProblemSummary,
+    goals_summary: summaries.goalsSummary,
+    progress_summary: summaries.progressSummary,
+    overall_findings: summaries.overallFindings,
+    source: "automatic_final_note_ai_summary",
+    note_count: sessionNotes.length,
+  };
+
+  const { error: updatePlanError } = await supabase
+    .from("treatment_plans")
+    .update({
+      presenting_problem_summary: summaries.presentingProblemSummary,
+      goals_summary: summaries.goalsSummary,
+      progress_summary: summaries.progressSummary,
+      overall_findings: summaries.overallFindings,
+    })
+    .eq("id", treatmentPlanId);
+
+  if (updatePlanError) {
+    throw new Error(updatePlanError.message ?? "The treatment plan AI summaries could not be updated.");
+  }
+
+  await insertAuditLog({
+    action: "generate_treatment_plan_summaries",
+    actorProfileId: userId,
+    beforeState,
+    afterState,
+    entityId: treatmentPlanId,
+    entityType: "treatment_plan",
+  });
+}
+
 export async function updateNoteAction(
   _prevState: UpdateNoteState,
   formData: FormData,
@@ -400,192 +507,19 @@ export async function updateNoteAction(
     }
   }
 
-  if (parsed.data.noteType === "discharge" && parsed.data.treatmentPlanId) {
-    const { error: completePlanError } = await supabase
-      .from("treatment_plans")
-      .update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", parsed.data.treatmentPlanId);
-
-    if (completePlanError) {
-      return { error: completePlanError.message };
-    }
-  }
-
-  if (
-    parsed.data.noteType === "initial_assessment" &&
-    parsed.data.submitIntent === "complete_and_generate_plan_summaries"
-  ) {
-    if (!noteData.treatment_plan_id) {
-      return { error: "Treatment plan context is missing for AI summary generation." };
-    }
-
-    const { data: plan, error: planError } = await supabase
-      .from("treatment_plans")
-      .select("id, title, presenting_problem_summary, goals_summary, progress_summary")
-      .eq("id", noteData.treatment_plan_id)
-      .maybeSingle();
-
-    if (planError || !plan) {
-      return { error: planError?.message ?? "Unable to load the treatment plan before AI summary generation." };
-    }
-
-    try {
-      const summaries = await generateTreatmentPlanSummaries({
-        planTitle: plan.title,
-        noteContent: content as Record<string, unknown>,
-      });
-
-      const beforeState = {
-        presenting_problem_summary: plan.presenting_problem_summary,
-        goals_summary: plan.goals_summary,
-        progress_summary: plan.progress_summary,
-      };
-
-      const afterState = {
-        presenting_problem_summary: summaries.presentingProblemSummary,
-        goals_summary: summaries.goalsSummary,
-        progress_summary: summaries.progressSummary,
-        source_note_id: noteData.id,
-        source: "initial_assessment_ai_summary",
-      };
-
-      const { error: updatePlanError } = await supabase
-        .from("treatment_plans")
-        .update({
-          presenting_problem_summary: summaries.presentingProblemSummary,
-          goals_summary: summaries.goalsSummary,
-          progress_summary: summaries.progressSummary,
-        })
-        .eq("id", noteData.treatment_plan_id);
-
-      if (updatePlanError) {
-        return {
-          error: updatePlanError.message ?? "The note was saved, but the treatment plan summaries could not be updated.",
-        };
-      }
-
-      await insertAuditLog({
-        action: "generate_treatment_plan_summaries",
-        actorProfileId: user.id,
-        beforeState,
-        afterState,
-        entityId: noteData.treatment_plan_id,
-        entityType: "treatment_plan",
-      });
-
-      revalidatePath(`/treatment-plans/${noteData.treatment_plan_id}`);
-      redirect(`/treatment-plans/${noteData.treatment_plan_id}/edit?aiGenerated=1`);
-    } catch (error) {
-      if (isRedirectError(error)) {
-        throw error;
-      }
-
-      return {
-        error: error instanceof Error ? error.message : "The note was saved, but AI summary generation failed.",
-      };
-    }
-  }
-
-  if (parsed.data.noteType === "follow_up" && parsed.data.submitIntent === "complete_and_discharge") {
-    if (!noteData.treatment_plan_id) {
-      return { error: "Treatment plan context is missing for discharge." };
-    }
-
-    const { data: existingDischarge } = await supabase
-      .from("clinical_notes")
-      .select("id")
-      .eq("treatment_plan_id", noteData.treatment_plan_id)
-      .eq("note_type", "discharge")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (existingDischarge?.id) {
-      redirect(`/notes/${existingDischarge.id}`);
-    }
-
-    let sessionLocation: string | null = null;
-    if (noteData.appointment_id) {
-      const { data: appointmentData } = await supabase
-        .from("appointments")
-        .select("location")
-        .eq("id", noteData.appointment_id)
-        .maybeSingle();
-
-      sessionLocation = appointmentData?.location ?? null;
-    }
-
-    const { data: sessionData, error: sessionError } = await supabase
-      .from("appointments")
-      .insert({
-        patient_id: noteData.patient_id,
-        treatment_plan_id: noteData.treatment_plan_id,
-        scheduled_at: new Date().toISOString(),
-        appointment_type: NOTE_TYPE_LABELS.discharge,
-        status: "completed",
-        clinician_id: user.id,
-        location: sessionLocation,
-      })
-      .select("id")
-      .single();
-
-    if (sessionError || !sessionData) {
-      return { error: sessionError?.message ?? "Failed to create discharge session." };
-    }
-
-    const { data: dischargeNoteData, error: dischargeNoteError } = await supabase
-      .from("clinical_notes")
-      .insert({
-        patient_id: noteData.patient_id,
-        appointment_id: sessionData.id,
-        treatment_plan_id: noteData.treatment_plan_id,
-        note_type: "discharge",
-        title: NOTE_TYPE_LABELS.discharge,
-        status: "draft",
-        created_by: user.id,
-      })
-      .select("id")
-      .single();
-
-    if (dischargeNoteError || !dischargeNoteData) {
-      return { error: dischargeNoteError?.message ?? "Failed to create discharge note." };
-    }
-
-    const { data: dischargeVersionData, error: dischargeVersionError } = await supabase
-      .from("note_versions")
-      .insert({
-        clinical_note_id: dischargeNoteData.id,
-        source_type: "clinician_template",
-        content: createNoteTemplateContent("discharge"),
-        created_by: user.id,
-        is_current: true,
-      })
-      .select("id")
-      .single();
-
-    if (dischargeVersionError || !dischargeVersionData) {
-      return { error: dischargeVersionError?.message ?? "Failed to create discharge note version." };
-    }
-
-    const { error: dischargeLinkError } = await supabase
-      .from("clinical_notes")
-      .update({ current_version_id: dischargeVersionData.id })
-      .eq("id", dischargeNoteData.id);
-
-    if (dischargeLinkError) {
-      return { error: dischargeLinkError.message };
-    }
-
-    revalidatePath(`/treatment-plans/${noteData.treatment_plan_id}`);
-    redirect(`/notes/${dischargeNoteData.id}`);
-  }
-
   if (parsed.data.submitIntent === "save_draft") {
     revalidatePath(`/notes/${parsed.data.noteId}`);
     return { success: "Draft saved." };
+  }
+
+  if (noteData.treatment_plan_id) {
+    try {
+      await regenerateTreatmentPlanAiSummary(supabase, user.id, noteData.treatment_plan_id);
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : "The note was saved, but treatment plan AI generation failed.",
+      };
+    }
   }
 
   if (parsed.data.treatmentPlanId) {
@@ -609,56 +543,6 @@ function asString(value: unknown) {
 
 function asStringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
-
-function summarizeFollowUpContent(content: Record<string, unknown>) {
-  return [
-    `Subjective update: ${asString(content.subjective_update) || "Not recorded"}`,
-    `Pain rating (NPRS): Best ${asString(content.nprs_best) || "not recorded"}, Current ${asString(content.nprs_current) || asString(content.nprs) || "not recorded"}, Worst ${asString(content.nprs_worst) || "not recorded"}`,
-    `Response to previous treatment: ${asString(content.response_to_previous_treatment) || "Not recorded"}`,
-    `Objective reassessment: ${asString(content.objective_reassessment) || "Not recorded"}`,
-    `Treatment today: ${asString(content.treatment_today) || "Not recorded"}`,
-    `Exercises or self-management: ${asString(content.exercises_or_self_management) || "Not recorded"}`,
-    `Progress against goal: ${asString(content.progress_against_goal) || "Not recorded"}`,
-    `Next plan: ${asString(content.next_plan) || "Not recorded"}`,
-  ].join("\n");
-}
-
-function summarizeInitialAssessmentContent(content: Record<string, unknown>) {
-  const history = asRecord(content.history);
-  const objective = asRecord(content.objective);
-  const impression = asRecord(content.impression);
-  const plan = asRecord(content.plan);
-
-  return [
-    `PC: ${asString(history.pc) || "Not recorded"}`,
-    `HPC: ${asString(history.hpc) || "Not recorded"}`,
-    `Pain rating (NPRS): Best ${asString(history.nprs_best) || "not recorded"}, Current ${asString(history.nprs_current) || asString(history.nprs) || "not recorded"}, Worst ${asString(history.nprs_worst) || "not recorded"}`,
-    `Diurnal pattern: ${asString(history.diurnal_pattern) || "Not recorded"}`,
-    `Aggravating factors: ${asString(history.aggravating_factors) || "Not recorded"}`,
-    `Easing factors: ${asString(history.easing_factors) || "Not recorded"}`,
-    `Objective ROM: ${asString(objective.rom) || "Not recorded"}`,
-    `Special tests: ${asString(objective.special_tests) || "Not recorded"}`,
-    `Clinical opinion: ${asString(impression.opinion) || "Not recorded"}`,
-    `Problems and goals: ${asString(plan.problems_and_goals) || "Not recorded"}`,
-    `Actual treatment given: ${asString(plan.actual_treatment_given) || "Not recorded"}`,
-  ].join("\n");
-}
-
-function summarizeCurrentNote(noteType: NoteType, content: Record<string, unknown>) {
-  if (noteType === "follow_up") {
-    return summarizeFollowUpContent(content);
-  }
-
-  if (noteType === "initial_assessment") {
-    return summarizeInitialAssessmentContent(content);
-  }
-
-  return [
-    `Presenting problem summary: ${asString(content.presenting_problem_summary) || "Not recorded"}`,
-    `Treatment course summary: ${asString(content.treatment_course_summary) || "Not recorded"}`,
-    `Outcome: ${asString(content.outcome) || "Not recorded"}`,
-  ].join("\n");
 }
 
 export async function generateFollowUpSupportAction(

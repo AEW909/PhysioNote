@@ -5,8 +5,6 @@ import { AppShell } from "@/components/layout/app-shell";
 import { getCurrentProfile, requireRole } from "@/lib/auth/session";
 import { getPatient } from "@/lib/patients/queries";
 import { getTreatmentPlan } from "@/lib/treatment-plans/queries";
-import type { NoteType } from "@/lib/notes/types";
-
 type NewPlanSessionPageProps = {
   params: Promise<{ planId: string }>;
 };
@@ -27,7 +25,9 @@ export default async function NewPlanSessionPage({ params }: NewPlanSessionPageP
     redirect(`/treatment-plans/${plan.id}`);
   }
 
-  const allowedNoteTypes: NoteType[] = plan.sessions.length ? ["follow_up", "discharge"] : ["initial_assessment"];
+  const allowedNoteTypes: Array<"initial_assessment" | "follow_up"> = plan.sessions.length
+    ? ["follow_up"]
+    : ["initial_assessment"];
 
   return (
     <AppShell

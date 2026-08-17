@@ -7,7 +7,7 @@ import { NOTE_TYPE_LABELS } from "@/lib/notes/templates";
 type CreateAppointmentFormProps = {
   patientId: string;
   treatmentPlanId: string;
-  allowedNoteTypes?: Array<"initial_assessment" | "follow_up" | "discharge">;
+  allowedNoteTypes?: Array<"initial_assessment" | "follow_up">;
 };
 
 const initialState = {
@@ -23,7 +23,7 @@ function getDefaultDateTimeLocal() {
 export function CreateAppointmentForm({
   patientId,
   treatmentPlanId,
-  allowedNoteTypes = ["follow_up", "discharge"],
+  allowedNoteTypes = ["follow_up"],
 }: CreateAppointmentFormProps) {
   const [state, formAction, pending] = useActionState(createAppointmentAction, initialState);
 

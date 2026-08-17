@@ -15,7 +15,7 @@ const appointmentSchema = z.object({
   patientId: z.string().uuid("Patient ID is missing."),
   treatmentPlanId: z.string().uuid("Treatment plan ID is missing."),
   scheduledAt: z.string().trim().min(1, "Appointment date and time are required."),
-  noteType: z.enum(["initial_assessment", "follow_up", "discharge"]),
+  noteType: z.enum(["initial_assessment", "follow_up"]),
   location: z.string().trim().optional(),
 });
 
