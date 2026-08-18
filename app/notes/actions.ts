@@ -21,6 +21,12 @@ export type UpdateNoteState = {
   success?: string;
 };
 
+export type AutosaveNoteDraftState = {
+  error?: string;
+  savedAt?: string;
+  skipped?: boolean;
+};
+
 export type GenerateFollowUpSupportState = {
   error?: string;
   support?: {
@@ -203,6 +209,11 @@ const updateNoteSchema = z.object({
   noteType: z.enum(["initial_assessment", "follow_up"]),
   treatmentPlanId: z.string().uuid().optional(),
   submitIntent: z.enum(["save_draft", "complete_note"]).default("complete_note"),
+});
+
+const autosaveNoteDraftSchema = updateNoteSchema.pick({
+  noteId: true,
+  noteType: true,
 });
 
 const generateFollowUpSupportSchema = z.object({
@@ -561,6 +572,111 @@ export async function updateNoteAction(
 
   revalidatePath(`/notes/${parsed.data.noteId}`);
   return { success: "Note completed." };
+}
+
+export async function autosaveNoteDraftAction(formData: FormData): Promise<AutosaveNoteDraftState> {
+  const parsed = autosaveNoteDraftSchema.safeParse({
+    noteId: getValue(formData, "noteId"),
+    noteType: getValue(formData, "noteType"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Unable to autosave note." };
+  }
+
+  const user = await requireUser();
+  const supabase = await createSupabaseServerClient();
+  const content = buildNoteContent(parsed.data.noteType as NoteType, formData);
+
+  const { data: noteData, error: noteError } = await supabase
+    .from("clinical_notes")
+    .select("id, patient_id, current_version_id, status, updated_at")
+    .eq("id", parsed.data.noteId)
+    .maybeSingle();
+
+  if (noteError || !noteData) {
+    return { error: noteError?.message ?? "Failed to load note before autosaving." };
+  }
+
+  if (noteData.status !== "draft") {
+    return { skipped: true };
+  }
+
+  const { data: versionData, error: versionError } = await supabase
+    .from("note_versions")
+    .insert({
+      clinical_note_id: parsed.data.noteId,
+      source_type: "autosave_draft",
+      content,
+      created_by: user.id,
+      is_current: false,
+    })
+    .select("id")
+    .single();
+
+  if (versionError || !versionData) {
+    return { error: versionError?.message ?? "Failed to autosave note changes." };
+  }
+
+  const { data: updatedNote, error: linkError } = await supabase
+    .from("clinical_notes")
+    .update({
+      current_version_id: versionData.id,
+      status: "draft",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", parsed.data.noteId)
+    .eq("status", "draft")
+    .eq("updated_at", noteData.updated_at)
+    .select("id")
+    .maybeSingle();
+
+  if (linkError) {
+    return { error: linkError.message };
+  }
+
+  if (!updatedNote) {
+    await supabase.from("note_versions").delete().eq("id", versionData.id);
+    return { skipped: true };
+  }
+
+  const { error: markCurrentError } = await supabase.from("note_versions").update({ is_current: true }).eq("id", versionData.id);
+
+  if (markCurrentError) {
+    return { error: markCurrentError.message };
+  }
+
+  if (noteData.current_version_id) {
+    const { error: unsetError } = await supabase
+      .from("note_versions")
+      .update({ is_current: false })
+      .eq("id", noteData.current_version_id);
+
+    if (unsetError) {
+      return { error: unsetError.message };
+    }
+  }
+
+  if (parsed.data.noteType === "initial_assessment") {
+    const medicalHistory = asRecord((content as Record<string, unknown>).medical_history);
+    const { error: patientMedicalHistoryError } = await supabase
+      .from("patients")
+      .update({
+        past_medical_history: asStringArray(medicalHistory.past_medical_history),
+        drug_history: asString(medicalHistory.medication_history) || null,
+        uses_steroids: medicalHistory.uses_steroids === true,
+        uses_anticoagulants: medicalHistory.uses_anticoagulants === true,
+        past_medical_history_details: asString(medicalHistory.past_medical_history_details) || null,
+        past_operations: asString(medicalHistory.past_operations) || null,
+      })
+      .eq("id", noteData.patient_id);
+
+    if (patientMedicalHistoryError) {
+      return { error: patientMedicalHistoryError.message };
+    }
+  }
+
+  return { savedAt: new Date().toISOString() };
 }
 
 function asRecord(value: unknown) {

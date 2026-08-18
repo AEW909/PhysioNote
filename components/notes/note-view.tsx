@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { updateNoteAction } from "@/app/notes/actions";
+import { autosaveNoteDraftAction, updateNoteAction } from "@/app/notes/actions";
 import {
   CERVICAL_QUESTION_OPTIONS,
   GOAL_OPTIONS,
@@ -27,6 +27,8 @@ const initialState = {
   success: "",
 };
 
+type AutosaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
+
 function asRecord(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -43,6 +45,14 @@ function asStringArray(value: unknown) {
 
 function asBoolean(value: unknown) {
   return value === true;
+}
+
+function getAutosaveStatusLabel(status: AutosaveStatus) {
+  if (status === "dirty") return "Unsaved changes";
+  if (status === "saving") return "Saving draft...";
+  if (status === "saved") return "Draft saved";
+  if (status === "error") return "Autosave failed. Use Save draft.";
+  return "Draft auto-saves after you stop typing";
 }
 
 type BodyMapMark = {
@@ -360,8 +370,15 @@ export function NoteView({ note, patient }: NoteViewProps) {
   const [errorModalMessage, setErrorModalMessage] = useState<string | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
   const [pendingIntent, setPendingIntent] = useState<string | null>(null);
+  const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>("idle");
   const isSubmittingRef = useRef(false);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const autosaveTimerRef = useRef<number | null>(null);
+  const autosaveInFlightRef = useRef(false);
+  const autosaveQueuedRef = useRef(false);
+  const editRevisionRef = useRef(0);
+  const pendingRef = useRef(pending);
+  const pendingNavigationHrefRef = useRef<string | null>(pendingNavigationHref);
   const content = asRecord(note.current_version?.content ?? {});
   const history = asRecord(content.history);
   const medicalHistory = asRecord(content.medical_history);
@@ -419,6 +436,70 @@ export function NoteView({ note, patient }: NoteViewProps) {
   const followUpNprsBest = asString(content.nprs_best);
   const followUpNprsCurrent = asString(content.nprs_current) || asString(content.nprs);
   const followUpNprsWorst = asString(content.nprs_worst);
+  const autosaveEligible = note.status === "draft";
+
+  function clearAutosaveTimer() {
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+  }
+
+  function scheduleAutosave() {
+    if (!autosaveEligible || pendingRef.current || pendingNavigationHrefRef.current) return;
+
+    clearAutosaveTimer();
+    autosaveTimerRef.current = window.setTimeout(() => {
+      void runAutosave();
+    }, 6000);
+  }
+
+  async function runAutosave() {
+    if (!autosaveEligible || !formRef.current || pendingRef.current || pendingNavigationHrefRef.current) return;
+
+    if (autosaveInFlightRef.current) {
+      autosaveQueuedRef.current = true;
+      return;
+    }
+
+    const revision = editRevisionRef.current;
+    const formData = new FormData(formRef.current);
+    autosaveInFlightRef.current = true;
+    setAutosaveStatus("saving");
+
+    try {
+      const result = await autosaveNoteDraftAction(formData);
+
+      if (result.error) {
+        console.error(result.error);
+        if (editRevisionRef.current === revision) {
+          setAutosaveStatus("error");
+        }
+        return;
+      }
+
+      if (editRevisionRef.current === revision) {
+        setIsDirty(false);
+        setAutosaveStatus(result.skipped ? "idle" : "saved");
+        return;
+      }
+
+      autosaveQueuedRef.current = true;
+      setAutosaveStatus("dirty");
+    } catch (error) {
+      console.error(error);
+      if (editRevisionRef.current === revision) {
+        setAutosaveStatus("error");
+      }
+    } finally {
+      autosaveInFlightRef.current = false;
+
+      if (autosaveQueuedRef.current) {
+        autosaveQueuedRef.current = false;
+        scheduleAutosave();
+      }
+    }
+  }
   function handleKeyDown(event: React.KeyboardEvent<HTMLFormElement>) {
     if (event.key !== "Enter") return;
     const target = event.target;
@@ -437,13 +518,19 @@ export function NoteView({ note, patient }: NoteViewProps) {
 
   function markDirty() {
     if (!isSubmittingRef.current) {
+      editRevisionRef.current += 1;
       setIsDirty(true);
+      setAutosaveStatus("dirty");
+      scheduleAutosave();
     }
   }
 
   function handleSubmit() {
+    clearAutosaveTimer();
+    autosaveQueuedRef.current = false;
     isSubmittingRef.current = true;
     setIsDirty(false);
+    setAutosaveStatus("idle");
     setPendingNavigationHref(null);
   }
 
@@ -475,10 +562,22 @@ export function NoteView({ note, patient }: NoteViewProps) {
   }
 
   useEffect(() => {
+    pendingRef.current = pending;
+
     if (!pending) {
       isSubmittingRef.current = false;
     }
   }, [pending]);
+
+  useEffect(() => {
+    pendingNavigationHrefRef.current = pendingNavigationHref;
+  }, [pendingNavigationHref]);
+
+  useEffect(() => {
+    return () => {
+      clearAutosaveTimer();
+    };
+  }, []);
 
   useEffect(() => {
     if (state.error) {
@@ -620,6 +719,7 @@ export function NoteView({ note, patient }: NoteViewProps) {
             </button>
             {state.success && state.success !== "Draft saved." ? <p className="form-success">{state.success}</p> : null}
             {state.error ? <p className="form-error">{state.error}</p> : null}
+            {autosaveEligible ? <p className="note-autosave-hint">{getAutosaveStatusLabel(autosaveStatus)}</p> : null}
           </div>
         ) : null}
 
@@ -1068,6 +1168,7 @@ export function NoteView({ note, patient }: NoteViewProps) {
           </button>
           {state.success && state.success !== "Draft saved." ? <p className="form-success">{state.success}</p> : null}
           {state.error ? <p className="form-error">{state.error}</p> : null}
+          {autosaveEligible ? <p className="note-autosave-hint">{getAutosaveStatusLabel(autosaveStatus)}</p> : null}
         </div>
       </form>
     </>
