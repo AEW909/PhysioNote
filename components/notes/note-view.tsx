@@ -362,8 +362,6 @@ export function NoteView({ note, patient }: NoteViewProps) {
   const [pendingIntent, setPendingIntent] = useState<string | null>(null);
   const isSubmittingRef = useRef(false);
   const formRef = useRef<HTMLFormElement | null>(null);
-  const autosaveButtonRef = useRef<HTMLButtonElement | null>(null);
-  const autosaveTimerRef = useRef<number | null>(null);
   const content = asRecord(note.current_version?.content ?? {});
   const history = asRecord(content.history);
   const medicalHistory = asRecord(content.medical_history);
@@ -421,8 +419,6 @@ export function NoteView({ note, patient }: NoteViewProps) {
   const followUpNprsBest = asString(content.nprs_best);
   const followUpNprsCurrent = asString(content.nprs_current) || asString(content.nprs);
   const followUpNprsWorst = asString(content.nprs_worst);
-  const autosaveEligible = note.status === "draft";
-
   function handleKeyDown(event: React.KeyboardEvent<HTMLFormElement>) {
     if (event.key !== "Enter") return;
     const target = event.target;
@@ -481,7 +477,6 @@ export function NoteView({ note, patient }: NoteViewProps) {
   useEffect(() => {
     if (!pending) {
       isSubmittingRef.current = false;
-      setPendingIntent((current) => (current === "autosave_draft" ? null : current));
     }
   }, [pending]);
 
@@ -490,30 +485,6 @@ export function NoteView({ note, patient }: NoteViewProps) {
       setErrorModalMessage(state.error);
     }
   }, [state.error]);
-
-  useEffect(() => {
-    if (autosaveTimerRef.current) {
-      window.clearTimeout(autosaveTimerRef.current);
-      autosaveTimerRef.current = null;
-    }
-
-    if (!autosaveEligible || !isDirty || pending || pendingNavigationHref) {
-      return;
-    }
-
-    autosaveTimerRef.current = window.setTimeout(() => {
-      if (!autosaveButtonRef.current || !formRef.current) return;
-      setPendingIntent("autosave_draft");
-      formRef.current.requestSubmit(autosaveButtonRef.current);
-    }, 1500);
-
-    return () => {
-      if (autosaveTimerRef.current) {
-        window.clearTimeout(autosaveTimerRef.current);
-        autosaveTimerRef.current = null;
-      }
-    };
-  }, [autosaveEligible, isDirty, pending, pendingNavigationHref]);
 
   useEffect(() => {
     setHasMounted(true);
@@ -649,15 +620,6 @@ export function NoteView({ note, patient }: NoteViewProps) {
             </button>
             {state.success && state.success !== "Draft saved." ? <p className="form-success">{state.success}</p> : null}
             {state.error ? <p className="form-error">{state.error}</p> : null}
-            {autosaveEligible ? (
-              <p className="note-autosave-hint">
-                {pending && pendingIntent === "autosave_draft"
-                  ? "Autosaving..."
-                  : state.success === "Draft saved."
-                    ? "Auto-saved"
-                    : "Draft auto-saves while you type"}
-              </p>
-            ) : null}
           </div>
         ) : null}
 
@@ -1104,29 +1066,8 @@ export function NoteView({ note, patient }: NoteViewProps) {
           >
             {pending && pendingIntent === "complete_note" ? "Completing note..." : "Complete note"}
           </button>
-          <button
-            aria-hidden="true"
-            className="sr-only"
-            disabled={pending}
-            name="submitIntent"
-            ref={autosaveButtonRef}
-            tabIndex={-1}
-            type="submit"
-            value="save_draft"
-          >
-            Save draft
-          </button>
           {state.success && state.success !== "Draft saved." ? <p className="form-success">{state.success}</p> : null}
           {state.error ? <p className="form-error">{state.error}</p> : null}
-          {autosaveEligible ? (
-            <p className="note-autosave-hint">
-              {pending && pendingIntent === "autosave_draft"
-                ? "Autosaving..."
-                : state.success === "Draft saved."
-                  ? "Auto-saved"
-                  : "Draft auto-saves while you type"}
-            </p>
-          ) : null}
         </div>
       </form>
     </>
