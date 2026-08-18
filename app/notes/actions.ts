@@ -315,6 +315,16 @@ async function regenerateTreatmentPlanAiSummary(
   userId: string,
   treatmentPlanId: string,
 ) {
+  const startedAt = Date.now();
+  console.log(
+    JSON.stringify({
+      level: "info",
+      msg: "treatment_plan_ai_summary_start",
+      treatmentPlanId,
+      userId,
+    }),
+  );
+
   const { data: plan, error: planError } = await supabase
     .from("treatment_plans")
     .select("id, title, presenting_problem_summary, goals_summary, progress_summary, overall_findings")
@@ -417,6 +427,17 @@ async function regenerateTreatmentPlanAiSummary(
     entityId: treatmentPlanId,
     entityType: "treatment_plan",
   });
+
+  console.log(
+    JSON.stringify({
+      level: "info",
+      msg: "treatment_plan_ai_summary_success",
+      treatmentPlanId,
+      userId,
+      noteCount: sessionNotes.length,
+      ms: Date.now() - startedAt,
+    }),
+  );
 }
 
 export async function updateNoteAction(
@@ -427,7 +448,7 @@ export async function updateNoteAction(
     noteId: getValue(formData, "noteId"),
     noteType: getValue(formData, "noteType"),
     treatmentPlanId: getValue(formData, "treatmentPlanId") || undefined,
-    submitIntent: getValue(formData, "submitIntent") || "save",
+    submitIntent: getValue(formData, "submitIntent") || "complete_note",
   });
 
   if (!parsed.success) {
@@ -516,6 +537,17 @@ export async function updateNoteAction(
     try {
       await regenerateTreatmentPlanAiSummary(supabase, user.id, noteData.treatment_plan_id);
     } catch (error) {
+      console.error(
+        JSON.stringify({
+          level: "error",
+          msg: "treatment_plan_ai_summary_failed",
+          noteId: parsed.data.noteId,
+          treatmentPlanId: noteData.treatment_plan_id,
+          userId: user.id,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+
       return {
         error: error instanceof Error ? error.message : "The note was saved, but treatment plan AI generation failed.",
       };
